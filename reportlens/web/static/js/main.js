@@ -1,6 +1,7 @@
 // Application bootstrap and session orchestration: routing, selection, polling of indexing documents.
 
 import { api, setErrorHooks, setLimits } from "./api.js";
+import { APP_NAME } from "./brand.js";
 import { ChatPane } from "./chat.js";
 import { confirmDialog } from "./dialog.js";
 import { h } from "./dom.js";
@@ -8,6 +9,7 @@ import { initFloating } from "./hovercard.js";
 import { icon } from "./icons.js";
 import { promptLogin } from "./login.js";
 import { initLayout } from "./layout.js";
+import { llmSummary, openLLMDialog } from "./llm.js";
 import { closePanel, dropSessionCache, initPanel, panelState } from "./panel.js";
 import { Sidebar, sessionLabel } from "./sidebar.js";
 import { removeSession, sessionById, setState, state, upsertSession } from "./state.js";
@@ -28,6 +30,7 @@ let pollTicks = 0;
 const routeSid = () => /^#\/s\/([0-9a-f]{32})$/.exec(location.hash)?.[1] || null;
 
 async function refreshSessions() {
+  if (state.demoOnly) return; // browsing the demo without a code: there is no chat list to fetch
   try {
     setState({ sessions: await api.listSessions() });
   } catch (err) {
@@ -64,11 +67,28 @@ async function openSession(sid) {
   schedulePoll();
 }
 
-/** Opens the most recent chat, or starts a new one when there are none. */
+/** Opens the most recent chat, or starts a new one when there are none (the demo, when browsing it without a code). */
 async function openFallback() {
+  if (state.demoOnly) return state.demo?.available ? openSession(state.demo.session_id) : signIn();
   const next = state.sessions[0];
   if (next) return openSession(next.id);
   return createAndOpen();
+}
+
+function openDemo() {
+  if (state.demo?.available) openSession(state.demo.session_id);
+}
+
+/** "Ask your own question about this report": a chat of one's own with the demo's document, already indexed (no cost). */
+async function askAboutDemo() {
+  if (state.demoOnly) return signIn();
+  return createAndOpen(state.demo?.session_id);
+}
+
+/** From the demo: show the access-code screen again; a valid code reloads into the full app. */
+async function signIn() {
+  const choice = await promptLogin({ requestEmail: state.auth?.requestEmail, demo: null, cancellable: !!state.demo?.available });
+  if (choice === "login") location.reload();
 }
 
 async function createAndOpen(fromSession) {
@@ -82,6 +102,7 @@ async function createAndOpen(fromSession) {
 }
 
 async function newChat() {
+  if (state.demoOnly) return signIn();
   const current = state.detail;
   if (current?.state === "empty") {
     layout.closeDrawer();
@@ -135,10 +156,25 @@ async function renameSession(sid, title) {
   }
 }
 
+// ---------------------------------------------------------------------------------- the visitor's own model and key
+let llmOpen = false;
+async function openLLM() {
+  if (llmOpen || state.demoOnly) return;
+  llmOpen = true;
+  try {
+    if (await openLLMDialog()) chat.refreshUsage(); // banner and composer depend on whether a key is set
+  } finally {
+    llmOpen = false;
+  }
+}
+
 // ---------------------------------------------------------------------------------- access code and usage budget
 /** The server said 401 auth_required (the login cookie expired): ask for the code again, then reload the page state. */
 function onAuthRequired() {
-  promptLogin().then(() => location.reload());
+  promptLogin({ requestEmail: state.auth?.requestEmail, demo: state.demo }).then((choice) => {
+    if (choice === "login") location.reload();
+    else if (choice === "demo") location.replace(`#/s/${state.demo.session_id}`), location.reload();
+  });
 }
 
 async function signOut() {
@@ -179,6 +215,7 @@ function schedulePoll() {
 }
 
 async function pollOnce() {
+  if (state.demoOnly) return; // nothing of one's own can be indexing (and the list needs the access code)
   const sid = state.activeId;
   try {
     if (state.detail?.state === "indexing") {
@@ -272,6 +309,8 @@ async function boot() {
     onCancelIndexing: (sid) => removeNow(sid),
     onOpenSidebar: () => layout.openDrawer(),
     onSessionGone: (sid) => removeNow(sid),
+    onAskAboutDemo: askAboutDemo,
+    onSignIn: signIn,
   });
   sidebar = new Sidebar($("sidebar"), {
     onSelect: (sid) => openSession(sid),
@@ -281,6 +320,9 @@ async function boot() {
     onNewFromDocument: (sid) => createAndOpen(sid),
     onToggle: () => layout.toggleSidebar(),
     onSignOut: signOut,
+    onSignIn: signIn,
+    onOpenDemo: openDemo,
+    onOpenLLM: openLLM,
   });
   layout = initLayout({
     app,
@@ -307,24 +349,35 @@ async function boot() {
   });
   document.addEventListener("visibilitychange", () => (document.hidden ? clearTimeout(pollTimer) : pollOnce()));
 
-  setErrorHooks({ authRequired: onAuthRequired, budgetExhausted: onBudgetExhausted });
+  setErrorHooks({ authRequired: onAuthRequired, budgetExhausted: onBudgetExhausted, ownKeyRequired: () => openLLM() });
   try {
-    const auth = await api.auth();
-    setState({ auth: { required: auth.required } });
-    if (auth.required && !auth.authenticated) await promptLogin();
+    const [auth, demo] = await Promise.all([api.auth(), api.demo().catch(() => ({ available: false }))]);
+    setState({ auth: { required: auth.required, requestEmail: auth.request_email || null }, demo });
+    if (auth.required && !auth.authenticated) {
+      const wantsDemo = demo.available && routeSid() === demo.session_id; // a shared link to the demo opens it straight away
+      const choice = wantsDemo ? "demo" : await promptLogin({ requestEmail: auth.request_email, demo });
+      setState({ demoOnly: choice === "demo" });
+    }
   } catch (err) {
     return showBootError(err);
   }
   try {
-    const [config, health, sessions] = await Promise.all([api.config(), api.health().catch(() => null), api.listSessions()]);
-    setLimits({ maxUploadMb: config.max_upload_mb, maxPages: config.max_pages, publicMode: !!config.public_mode });
-    setState({ config, health, sessions });
+    if (state.demoOnly) {
+      const config = await api.config();
+      setLimits({ maxUploadMb: config.max_upload_mb, maxPages: config.max_pages, publicMode: !!config.public_mode });
+      setState({ config, sessions: [] });
+    } else {
+      const [config, health, sessions] = await Promise.all([api.config(), api.health().catch(() => null), api.listSessions()]);
+      setLimits({ maxUploadMb: config.max_upload_mb, maxPages: config.max_pages, publicMode: !!config.public_mode });
+      setState({ config, health, sessions });
+      setState({ llm: config.llm?.visitor_keys === "off" ? null : llmSummary() });
+    }
   } catch (err) {
     return showBootError(err);
   }
   const wanted = routeSid();
   try {
-    if (wanted && sessionById(wanted)) await openSession(wanted);
+    if (wanted && (sessionById(wanted) || wanted === state.demo?.session_id)) await openSession(wanted);
     else await openFallback();
   } finally {
     $("boot").remove();
@@ -334,7 +387,7 @@ async function boot() {
 function showBootError(err) {
   const boot = $("boot");
   boot.replaceChildren(
-    h("div", { class: "state-card" }, h("span", { html: icon("triangle-alert", { size: 28 }) }), h("h2", { class: "state-card__title", text: "Can't reach ReportLens" }), h("p", { class: "state-card__sub", text: err?.message || "The server did not answer." }), h("button", { type: "button", class: "btn btn-primary", text: "Try again", on: { click: () => location.reload() } })),
+    h("div", { class: "state-card" }, h("span", { html: icon("triangle-alert", { size: 28 }) }), h("h2", { class: "state-card__title", text: `Can't reach ${APP_NAME}` }), h("p", { class: "state-card__sub", text: err?.message || "The server did not answer." }), h("button", { type: "button", class: "btn btn-primary", text: "Try again", on: { click: () => location.reload() } })),
   );
 }
 

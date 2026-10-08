@@ -1,6 +1,9 @@
 // Thin fetch wrappers for the REST API (docs/ARCHITECTURE.md section 5).
 // Every failure becomes an ApiError(code, message, status) so callers handle one shape.
 
+import { APP_NAME } from "./brand.js";
+import { llmHeaders } from "./llmstore.js";
+
 export class ApiError extends Error {
   constructor(code, message, status = 0) {
     super(message);
@@ -16,8 +19,8 @@ export function setLimits(next) {
   Object.assign(limits, next);
 }
 
-/** Callbacks for the two errors that change what the whole page shows (set once by main.js). */
-const hooks = { authRequired: null, budgetExhausted: null };
+/** Callbacks for the errors that change what the whole page shows (set once by main.js). */
+const hooks = { authRequired: null, budgetExhausted: null, ownKeyRequired: null };
 export function setErrorHooks(next) {
   Object.assign(hooks, next);
 }
@@ -26,6 +29,7 @@ export function setErrorHooks(next) {
 export function noteApiError(code) {
   if (code === "auth_required") hooks.authRequired?.();
   else if (code === "budget_exhausted") hooks.budgetExhausted?.();
+  else if (code === "own_key_required") hooks.ownKeyRequired?.();
 }
 
 /** Human wording per error code (the server's own message is the fallback). */
@@ -35,7 +39,7 @@ const HUMAN = {
   document_not_ready: () => "The document is still being indexed. You can ask once it is ready.",
   document_not_found: () => "The document file could not be found on the server.",
   file_too_large: () => `That file is larger than the ${limits.maxUploadMb} MB limit.`,
-  scanned_pdf: () => "This PDF looks scanned (it has no selectable text). ReportLens needs a text-based PDF.",
+  scanned_pdf: () => `This PDF looks scanned (it has no selectable text). ${APP_NAME} needs a text-based PDF.`,
   encrypted_pdf: () => "This PDF is password-protected. Remove the password and upload it again.",
   invalid_pdf: () => "That file is not a valid PDF.",
   too_many_pages: () => `This PDF has too many pages (limit ${limits.maxPages}).`,
@@ -56,7 +60,11 @@ const HUMAN = {
   session_not_found: () => (limits.publicMode ? "The demo restarted (free hosting sleeps). Please start a new chat and upload again." : "That chat no longer exists."),
   empty_question: () => "Type a question first.",
   cancelled: () => "Stopped before the answer was finished.",
-  network: () => "Cannot reach the ReportLens server. Check that it is still running.",
+  network: () => `Cannot reach the ${APP_NAME} server. Check that it is still running.`,
+  demo_read_only: () => "The demo chat is read-only. Sign in and start your own chat to ask questions.",
+  invalid_llm_config: (m) => m || "Your model settings are not valid. Open 'Model & API key' to fix them.",
+  own_key_required: () => "This server runs on your own API key. Open 'Model & API key' to add one.",
+  own_key_disabled: () => "This server does not accept your own API key. Remove it under 'Model & API key'.",
   stream_interrupted: () => "The connection to the server was lost before the answer finished.",
 };
 
@@ -66,12 +74,13 @@ export function humanMessage(err) {
   return (HUMAN[code] && HUMAN[code](message)) || message || "Something went wrong.";
 }
 
-async function request(method, path, { json, signal } = {}) {
+async function request(method, path, { json, signal, llm } = {}) {
   let response;
   try {
+    const base = json === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" };
     response = await fetch(path, {
       method,
-      headers: json === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" },
+      headers: { ...base, ...llmHeaders(llm) },
       body: json === undefined ? undefined : JSON.stringify(json),
       signal,
     });
@@ -98,6 +107,7 @@ const enc = encodeURIComponent;
 
 export const api = {
   auth: () => request("GET", "/api/auth"),
+  demo: () => request("GET", "/api/demo"),
   login: (code) => request("POST", "/api/login", { json: { code } }),
   logout: () => request("POST", "/api/logout"),
   health: () => request("GET", "/api/health"),
@@ -117,6 +127,8 @@ export const api = {
   },
   getMessage: (sid, mid) => request("GET", `/api/sessions/${enc(sid)}/messages/${enc(mid)}`),
   evaluate: (sid, mid) => request("POST", `/api/sessions/${enc(sid)}/messages/${enc(mid)}/evaluate`),
+  /** "Test connection" for a provider choice that may not be saved yet. */
+  checkLLM: (choice) => request("POST", "/api/llm/check", { llm: choice }),
   documentFileUrl: (sid) => `/api/sessions/${enc(sid)}/document/file`,
   messagesUrl: (sid) => `/api/sessions/${enc(sid)}/messages`,
 };
@@ -130,6 +142,7 @@ export function uploadDocument(sid, file, { onProgress, signal } = {}) {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `/api/sessions/${enc(sid)}/document`);
     xhr.setRequestHeader("Accept", "application/json");
+    for (const [name, value] of Object.entries(llmHeaders())) xhr.setRequestHeader(name, value);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
     };

@@ -35,7 +35,7 @@ from reportlens.web.routes import ServiceAPI, router
 
 log = logging.getLogger("reportlens.web")
 
-_KEY_FRAGMENT_RE = re.compile(r"sk-[A-Za-z0-9_\-*.]{6,}")
+_KEY_FRAGMENT_RE = re.compile(r"(?:sk-|gsk_|xai-|tgp_|AIza)[A-Za-z0-9_\-*.]{6,}")   # OpenAI/Anthropic/OpenRouter/DeepSeek, Groq, xAI, Together, Google
 
 
 class KeyRedactionFilter(logging.Filter):
@@ -72,6 +72,31 @@ def install_log_redaction() -> None:
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+API_DESCRIPTION = """
+Everything the web app does is available over this API: create a chat, upload one PDF, wait for it to be indexed, ask
+questions (streamed as Server-Sent Events, or as one JSON answer), open the cited pages and read the RAGAS scores.
+
+**Access.** When the server has an access code, `POST /api/login` with it once; the response sets a cookie that every
+later request sends (use a cookie jar: `curl -c jar -b jar`, `httpx.Client()`, `requests.Session()`). Each cookie jar is
+its own private visitor: it sees only the chats it created. The read-only demo chat (`GET /api/demo`) needs no code.
+
+**Your own model.** Send `X-LLM-Config: <base64url of a JSON object>` with `provider`, `api_key` and `chat_model` (plus
+optional `index_model`, `judge_model`, `embedding_model`, and `base_url` for self-hosted endpoints) on uploads, questions
+and re-scoring. `GET /api/config` lists the providers this server accepts. The key is used for that request only and is
+never stored or logged.
+
+Step-by-step examples (curl and Python): `docs/API.md` in the repository.
+"""
+
+API_TAGS = [
+    {"name": "Access", "description": "Access code, the visitor cookie, server configuration and health."},
+    {"name": "Demo", "description": "The read-only demo chat (no access code needed)."},
+    {"name": "Chats", "description": "Your chats (each holds exactly one document)."},
+    {"name": "Documents", "description": "Upload the PDF, poll its indexing, read pages, outline and highlight rectangles."},
+    {"name": "Questions", "description": "Ask (streamed or as one JSON answer), read answers, re-run the RAGAS scoring."},
+    {"name": "Model provider", "description": "Your own provider and key (optional)."},
+]
 
 # pdf.js needs its worker (same origin, plus blob: for its fallback wrapper) and 'wasm-unsafe-eval' for the JPX/JBIG2
 # decoders; styles allow inline because the UI sets style attributes (progress bars, highlight boxes).
@@ -290,6 +315,7 @@ class _Stack:
         self.indexer: Any = None
         self.store: Any = None
         self.mock: Any = None
+        self.demo: Any = None
 
     async def close(self) -> None:
         if self.service is not None:
@@ -328,6 +354,9 @@ def _build_stack(settings: Settings, stack: _Stack) -> Settings:
     pageindex_compat.apply_patches(full=not settings.index_in_subprocess)
     stack.indexer = IndexService(settings, stack.store)
     stack.service = ReportLensService(settings, store=stack.store, indexer=stack.indexer)
+    from reportlens.demo import install_demo
+
+    stack.demo = install_demo(settings, stack.store)       # None without a demo folder; never raises
     _warm_up(settings)
     return settings
 
@@ -360,6 +389,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
             await stack.close()
             raise
         app.state.service = stack.service
+        app.state.demo = getattr(stack, "demo", None)
     try:
         yield
     finally:
@@ -405,26 +435,36 @@ def _log_exposure(cfg: Settings) -> None:
 
 def create_app(settings: Optional[Settings] = None, service: Optional[ServiceAPI] = None) -> FastAPI:
     app = FastAPI(
-        title="ReportLens",
+        title="Annual Report Lens",
+        summary="Chat with an annual report: answers cited to the page, scored live with RAGAS.",
+        description=API_DESCRIPTION,
         version=__version__,
         lifespan=_lifespan,
-        docs_url=None,                      # the Swagger UI loads scripts from a CDN, which the CSP forbids
+        docs_url=None,                      # FastAPI's own page loads Swagger UI from a CDN, which the CSP forbids: see /docs below
         redoc_url=None,
         openapi_url="/api/openapi.json",
+        openapi_tags=API_TAGS,
+        license_info={"name": "MIT", "url": "https://opensource.org/license/mit"},
+        contact={"name": "sagarutkarsh1", "url": "https://github.com/sagarutkarsh1"},
     )
     install_log_redaction()
     app.state.settings = settings or load_settings()
     app.state.service = service
+    app.state.demo = None
     cfg: Settings = app.state.settings
     app.state.gate = AccessGate(cfg)
     app.state.login_limiter = SlidingWindowLimiter(LOGIN_MAX_FAILURES, LOGIN_WINDOW_S)
     app.state.question_limiter = SlidingWindowLimiter(cfg.questions_per_hour_per_ip, 3600.0)
+    app.state.check_limiter = SlidingWindowLimiter(20, 3600.0)          # "Test connection" of a visitor's own key
     _log_exposure(cfg)
 
     app.add_exception_handler(ServiceError, _on_service_error)
     app.add_exception_handler(RequestValidationError, _on_validation_error)
     app.add_exception_handler(StarletteHTTPException, _on_http_error)
-    app.add_middleware(AuthMiddleware, gate=app.state.gate)                  # innermost: runs after the host / origin checks
+    from reportlens.demo import DEMO_SESSION_ID
+
+    app.add_middleware(AuthMiddleware, gate=app.state.gate, private_chats=cfg.private_chats,          # innermost: runs after the
+                       demo_session_id=DEMO_SESSION_ID if cfg.demo_dir else None)                     # host / origin checks
     app.add_middleware(LocalGuardMiddleware, allowed_hosts=allowed_hosts(cfg), trust_proxy=cfg.trust_proxy, public=public_deployment(cfg))
     app.add_middleware(RequestMiddleware)               # added last = outermost: logs and adds headers to the guard's answers too
     app.include_router(router)
@@ -432,6 +472,11 @@ def create_app(settings: Optional[Settings] = None, service: Optional[ServiceAPI
     @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
     def index() -> FileResponse:
         return FileResponse(STATIC_DIR / "index.html", media_type=MIME_TYPES[".html"], headers={"Cache-Control": NO_CACHE})
+
+    @app.api_route("/docs", methods=["GET", "HEAD"], include_in_schema=False)
+    def docs() -> FileResponse:
+        """Swagger UI on /api/openapi.json, served from the vendored copy (no CDN)."""
+        return FileResponse(STATIC_DIR / "docs.html", media_type=MIME_TYPES[".html"], headers={"Cache-Control": NO_CACHE})
 
     @app.get("/favicon.ico", include_in_schema=False)
     def favicon() -> Response:

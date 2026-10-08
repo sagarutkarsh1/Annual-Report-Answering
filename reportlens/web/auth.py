@@ -4,8 +4,13 @@
 * `ACCESS_CODE` set    -> `POST /api/login {code}` checks it in constant time and sets an HttpOnly, SameSite=Lax cookie holding
   `expiry.nonce.HMAC`.  The HMAC key is derived from the access code plus `SESSION_SECRET` (or random bytes per process), so
   changing either invalidates every cookie.  A cookie, not a header, because pdf.js fetches the PDF itself.
-* `AuthMiddleware` answers 401 `auth_required` for every `/api/*` route except health / auth / login / logout.  Static files
-  stay public (the login screen is part of them).
+* `AuthMiddleware` answers 401 `auth_required` for every `/api/*` route except health / auth / login / logout and the read-only
+  demo (GET/HEAD of `/api/demo`, `/api/config` and the demo chat's own routes).  Static files stay public (the login screen is
+  part of them).
+* Private chats (`PRIVATE_CHATS`, on whenever an access code is set): every browser gets a long-lived `rl_visitor` cookie with
+  a random id, signed so it cannot be made up.  The middleware puts the id on `request.state.visitor`; the routes show and
+  open only that visitor's chats.  Its key does not depend on the access code, so changing the code does not orphan anyone's
+  chats.
 """
 from __future__ import annotations
 
@@ -13,6 +18,7 @@ import hashlib
 import hmac
 import ipaddress
 import logging
+import re
 import secrets
 import time
 from typing import Optional
@@ -26,11 +32,29 @@ from reportlens.config import Settings
 log = logging.getLogger("reportlens.web")
 
 COOKIE_NAME = "rl_session"
+VISITOR_COOKIE = "rl_visitor"
 SESSION_TTL_S = 12 * 3600
+VISITOR_TTL_S = 365 * 24 * 3600
 LOGIN_MAX_FAILURES = 10
 LOGIN_WINDOW_S = 10 * 60
 OPEN_API_PATHS = frozenset({"/api/health", "/api/auth", "/api/login", "/api/logout"})
+OPEN_READ_PATHS = frozenset({"/api/demo", "/api/config", "/api/openapi.json"})   # GET/HEAD only: the read-only demo + the API description
 MAX_CODE_CHARS = 512
+_READ_METHODS = frozenset({"GET", "HEAD"})
+_VISITOR_RE = re.compile(r"[0-9a-f]{32}\.[0-9a-f]{64}")
+
+
+def is_public_read(scope: Scope, demo_session_id: Optional[str]) -> bool:
+    """A request anyone may make without the access code: reading the demo chat (never changing it)."""
+    if scope.get("method") not in _READ_METHODS:
+        return False
+    path = scope["path"]
+    if path in OPEN_READ_PATHS:
+        return True
+    if not demo_session_id:
+        return False
+    prefix = f"/api/sessions/{demo_session_id}"
+    return path == prefix or path.startswith(prefix + "/")
 
 
 class AccessGate:
@@ -43,6 +67,10 @@ class AccessGate:
         secret = (settings.session_secret or "").encode("utf-8") or secrets.token_bytes(32)
         self._key = hashlib.sha256(b"reportlens-session-v1\0" + secret + b"\0" + self.code.encode("utf-8")).digest()
         self._code_digest = hashlib.sha256(self.code.encode("utf-8")).digest()
+        # Visitor ids must stay valid as long as the chats they own: SESSION_SECRET, else the code (stable across restarts of a
+        # local install), else random (no gate: nothing is private anyway).
+        visitor_secret = (settings.session_secret or self.code).encode("utf-8") or secrets.token_bytes(32)
+        self._visitor_key = hashlib.sha256(b"reportlens-visitor-v1\0" + visitor_secret).digest()
 
     # ----- the access code
     def code_matches(self, submitted: str) -> bool:
@@ -83,30 +111,76 @@ class AccessGate:
         return scope.get("scheme") == "https" or forwarded == "https"
 
     def set_cookie_header(self, token: str, *, secure: bool, max_age: int = SESSION_TTL_S) -> str:
-        parts = [f"{COOKIE_NAME}={token}", "Path=/", f"Max-Age={max_age}", "HttpOnly", "SameSite=Lax"]
-        if secure:
-            parts.append("Secure")
-        return "; ".join(parts)
+        return _cookie(COOKIE_NAME, token, secure=secure, max_age=max_age)
+
+    # ----- the visitor id (private chats)
+    def _visitor_sig(self, vid: str) -> str:
+        return hmac.new(self._visitor_key, vid.encode("ascii"), hashlib.sha256).hexdigest()
+
+    def issue_visitor(self) -> tuple[str, str]:
+        """(visitor id, cookie value) for a browser that has none yet."""
+        vid = secrets.token_hex(16)
+        return vid, f"{vid}.{self._visitor_sig(vid)}"
+
+    def visitor_from_scope(self, scope: Scope) -> Optional[str]:
+        raw = Headers(scope=scope).get("cookie")
+        token = cookie_parser(raw).get(VISITOR_COOKIE) if raw else None
+        if not token or not _VISITOR_RE.fullmatch(token):
+            return None
+        vid, signature = token.split(".")
+        return vid if hmac.compare_digest(signature, self._visitor_sig(vid)) else None
+
+    @staticmethod
+    def visitor_cookie_header(token: str, *, secure: bool) -> str:
+        return _cookie(VISITOR_COOKIE, token, secure=secure, max_age=VISITOR_TTL_S)
+
+
+def _cookie(name: str, value: str, *, secure: bool, max_age: int) -> str:
+    parts = [f"{name}={value}", "Path=/", f"Max-Age={max_age}", "HttpOnly", "SameSite=Lax"]
+    if secure:
+        parts.append("Secure")
+    return "; ".join(parts)
 
 
 class AuthMiddleware:
-    """Pure ASGI: 401 `auth_required` for gated API routes when the request has no valid login cookie."""
+    """Pure ASGI, for `/api/*` only: 401 `auth_required` when the request has no valid login cookie (except the open routes and
+    the read-only demo), and the visitor id on `scope["state"]["visitor"]` ('' when chats are not private)."""
 
-    def __init__(self, app: ASGIApp, gate: AccessGate):
+    def __init__(self, app: ASGIApp, gate: AccessGate, *, private_chats: bool = False, demo_session_id: Optional[str] = None):
         self.app = app
         self.gate = gate
+        self.private_chats = private_chats
+        self.demo_session_id = demo_session_id      # read at request time: the demo is installed after the app is built
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not self.gate.required:
+        if scope["type"] != "http" or not scope["path"].startswith("/api/"):
             await self.app(scope, receive, send)
             return
+        new_cookie: Optional[str] = None
+        visitor = ""
+        if self.private_chats:
+            visitor = self.gate.visitor_from_scope(scope) or ""
+            if not visitor:
+                visitor, token = self.gate.issue_visitor()
+                new_cookie = self.gate.visitor_cookie_header(token, secure=self.gate.is_https(scope))
+        scope.setdefault("state", {})["visitor"] = visitor
         path = scope["path"]
-        if path.startswith("/api/") and path not in OPEN_API_PATHS and not self.gate.valid_for_scope(scope):
+        if (self.gate.required and path not in OPEN_API_PATHS and not is_public_read(scope, self.demo_session_id)
+                and not self.gate.valid_for_scope(scope)):
             from reportlens.web.app import error_response      # late: app.py imports this module
 
             await error_response("auth_required", "Enter the access code to continue.", 401)(scope, receive, send)
             return
-        await self.app(scope, receive, send)
+        if new_cookie is None:
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_cookie(message: dict) -> None:
+            if message["type"] == "http.response.start":
+                message = {**message, "headers": [*message.get("headers", []), (b"set-cookie", new_cookie.encode("latin-1"))]}
+            await send(message)
+
+        await self.app(scope, receive, send_with_cookie)
 
 
 # --------------------------------------------------------------------------------------------- client address

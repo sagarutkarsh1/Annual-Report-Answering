@@ -71,6 +71,9 @@ class ChildEvaluator:
             if self._closed:
                 raise asyncio.CancelledError()
             env = dict(os.environ)
+            if self._settings.key_source == "visitor":    # the visitor's key travels in the request; the owner's stays out of reach
+                for name in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "LLM_API_KEY", "LLM_BASE_URL"):
+                    env.pop(name, None)
             env["PYTHONPATH"] = os.pathsep.join(p for p in (str(PROJECT_ROOT), env.get("PYTHONPATH")) if p)
             env.setdefault("MALLOC_ARENA_MAX", "2")
             env.update(PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8")

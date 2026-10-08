@@ -32,6 +32,7 @@ from pageindex.errors import PageIndexAPIError
 from .citations import MARKER, CitationContext, CiteStreamFilter, RawCite, build_answer, claim_for, strip_markers, tree_path_for_page
 from .config import Settings
 from .models import Citation, ContextPage, DocumentInfo, Step, Usage
+from .providers import bare_model
 from .pageindex_compat import make_client
 from .pricing import estimate_cost
 
@@ -522,6 +523,10 @@ class QAEngine:
         self._client_factory = client_factory
         self._clock = clock
 
+    def with_settings(self, settings: Settings) -> "QAEngine":
+        """The same engine for another provider / key (a visitor's own): cheap, nothing is opened here."""
+        return QAEngine(settings, self._client_factory, clock=self._clock)
+
     # ---- public
     def ask(self, *, session_id: str, doc: DocumentInfo, question: str, history: list[dict], ctx: CitationContext,
             cancel: Optional[threading.Event] = None) -> Iterator[Event]:
@@ -569,10 +574,10 @@ class QAEngine:
                  for m in history[-4:] if isinstance(m, dict)]
         prompt = "Conversation:\n" + "\n".join(turns) + f"\n\nLast question: {question}\n\nStandalone question:"
         try:
-            with openai.OpenAI(api_key=s.openai_api_key, base_url=s.openai_base_url, timeout=_REWRITE_TIMEOUT_S,
+            with openai.OpenAI(api_key=s.openai_api_key or "sk-not-needed", base_url=s.openai_base_url, timeout=_REWRITE_TIMEOUT_S,
                                max_retries=0) as client:
                 reply = client.chat.completions.create(
-                    model=s.question_rewrite_model, max_completion_tokens=300,
+                    model=bare_model(s.question_rewrite_model), max_completion_tokens=300,
                     messages=[{"role": "system", "content": _REWRITE_SYSTEM}, {"role": "user", "content": prompt}])
             lines = [ln.strip().strip("\"'") for ln in (reply.choices[0].message.content or "").splitlines() if ln.strip()]
         except Exception as exc:  # noqa: BLE001 - scoring must never depend on this call
@@ -628,7 +633,7 @@ class QAEngine:
     def _usage(self, envelope: dict, run: _Run) -> Usage:
         """Cross-turn usage from the responses envelope.  The chat lane reports none, so its tokens and cost stay unknown."""
         raw = envelope.get("usage") or {}
-        model = str(envelope.get("model") or self.settings.chat_model)
+        model = str(envelope.get("model") or bare_model(self.settings.chat_model))
         usage = Usage(model=model, input_tokens=int(raw.get("input_tokens") or 0),
                       cached_tokens=int((raw.get("input_tokens_details") or {}).get("cached_tokens") or 0),
                       output_tokens=int(raw.get("output_tokens") or 0),
@@ -671,6 +676,8 @@ class QAEngine:
         s = self.settings
         code = (code or "").lower()
         text = message.lower()
+        if s.key_source == "visitor" or s.llm_provider != "openai":
+            return self._provider_error(status, code, text, message)
         if status == 401 or code in ("invalid_api_key", "incorrect_api_key", "invalid_organization"):
             return QAError("openai_auth", "OpenAI rejected the API key. Check OPENAI_API_KEY in .env.")
         if status == 403:
@@ -692,6 +699,32 @@ class QAEngine:
                                            "Set PI_CHAT_MODEL (in .env) to a model you can use.")
         if status is not None and status >= 500:
             return QAError("agent_failed", f"OpenAI had a temporary problem (HTTP {status}). Try again in a moment.")
+        return QAError("agent_failed", _short(message))
+
+    def _provider_error(self, status: Optional[int], code: str, text: str, message: str) -> QAError:
+        """The same classification, worded for a visitor's own key or a non-OpenAI provider (no ".env" advice)."""
+        from .providers import PROVIDERS, bare_model
+
+        s = self.settings
+        provider = PROVIDERS.get(s.llm_provider)
+        who = provider.label if provider else "The model provider"
+        where = "under 'Model & API key'" if s.key_source == "visitor" else "in the server's settings"
+        model = bare_model(s.chat_model)
+        if status in (401, 403) or code in ("invalid_api_key", "incorrect_api_key", "invalid_organization"):
+            return QAError("openai_auth", f"{who} rejected the API key. Check it {where}.")
+        if status == 429 or code == "rate_limit_exceeded" or code in _BILLING_CODES:
+            if code in _BILLING_CODES or any(w in text for w in ("quota", "billing", "credit", "balance")):
+                return QAError("openai_rate_limit", f"{who} says the account behind the key is out of credit or at its limit.")
+            return QAError("openai_rate_limit", f"{who}'s rate limit was reached. Wait a moment and try again.")
+        if status == 400 and "tool" in text and any(w in text for w in ("support", "not allowed", "unsupported")):
+            return QAError("openai_model", f"The model '{model}' cannot call tools, which the agent needs to read the report. "
+                                           f"Pick a tool-capable model {where}.")
+        if status == 404 or code in ("model_not_found", "unsupported_model") or (
+                status == 400 and "model" in text and any(w in text for w in _NOT_FOUND_WORDS)):
+            return QAError("openai_model", f"{who} does not know the model '{model}' or the key has no access to it. "
+                                           f"Check the model id {where}.")
+        if status is not None and status >= 500:
+            return QAError("agent_failed", f"{who} had a temporary problem (HTTP {status}). Try again in a moment.")
         return QAError("agent_failed", _short(message))
 
 

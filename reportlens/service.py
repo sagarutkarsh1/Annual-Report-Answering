@@ -353,6 +353,7 @@ class ReportLensService:
         self._indexer = indexer
         self._qa = qa
         self._evaluator = evaluator
+        self._evaluator_injected = evaluator is not None       # a test double scores every request, whoever's key
         self._tree_loader = tree_loader or _default_tree_loader
         self._index_cloner = index_cloner or _default_index_cloner
         self._cache: "OrderedDict[str, _Resources]" = OrderedDict()
@@ -511,14 +512,26 @@ class ReportLensService:
         return msg
 
     # ------------------------------------------------------------------------------------------- sessions
-    def create_session(self, from_session: Optional[str] = None) -> Session:
+    def create_session(self, from_session: Optional[str] = None, *, owner: str = "") -> Session:
+        """`owner`: the visitor the chat belongs to ('' in the local single-user app).  `from_session` may be the demo chat:
+        "ask your own question about this report" reuses its index, so it costs nothing to set up."""
         limit = self._settings.max_sessions
         with self._create_lock if limit > 0 else contextlib.nullcontext():
-            if limit > 0 and len(self._store.list_sessions()) >= limit:
+            if limit > 0 and self._store.count_sessions() >= limit:
                 raise ServiceError("session_limit", f"This demo allows at most {limit} chats at once. Delete one to start another.", 429)
             if from_session is None:
-                return self._store.create_session()
-            return self._clone_session(from_session)
+                return self._store.create_session(owner=owner)
+            return self._clone_session(from_session, owner=owner)
+
+    def session_owner(self, sid: str) -> Optional[str]:
+        """Who `sid` belongs to (None: no such chat).  The web layer's per-request access check."""
+        return self._store.session_owner(sid)
+
+    def _require_writable(self, sid: str) -> Session:
+        session = self._require_session(sid)
+        if session.read_only:
+            raise ServiceError("demo_read_only", "The demo chat is read-only. Start your own chat to ask questions.", 403)
+        return session
 
     def check_budget(self) -> None:
         """Raise the 402 budget_exhausted error when no more work may be started (the upload route asks before reading the body)."""
@@ -528,19 +541,21 @@ class ReportLensService:
         """{"enabled", "used_fraction"} for GET /api/config (a fraction only: the owner's dollar amounts stay private)."""
         return self._budget.status()
 
-    def _clone_session(self, source_sid: str) -> Session:
+    def _clone_session(self, source_sid: str, *, owner: str = "") -> Session:
         """'New chat with the same document': copy the PDF and the PageIndex store (D3), no re-indexing, no cost."""
-        doc = self._require_session(source_sid).document
+        source = self._require_session(source_sid)
+        doc = source.document
         if doc is None or doc.status != "ready":
             raise ServiceError("document_not_ready", "That chat has no indexed document to reuse yet.", 409)
-        new = self._store.create_session()
+        new = self._store.create_session(owner=owner)
         dest = self._session_dir(new.id)
         try:
             with self._lock_for(self._state_locks, source_sid):
                 dest.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(self._pdf_path(source_sid, doc), dest / doc.doc_name)
                 pi_doc_id = self._index_cloner(self._settings, source_sid, new.id)
-            copy = doc.model_copy(update={"id": new_id(), "pi_doc_id": pi_doc_id, "created_at": now_iso()})
+            copy = doc.model_copy(update={"id": new_id(), "pi_doc_id": pi_doc_id, "created_at": now_iso(),
+                                          **({"key_source": "none"} if source.read_only else {})})
             self._store.put_document(new.id, copy)
         except Exception as exc:  # noqa: BLE001 - leave no half-made session behind
             log.exception("could not clone session %s into %s", source_sid, new.id)
@@ -552,8 +567,9 @@ class ReportLensService:
             raise ServiceError("clone_failed", "The document could not be copied into a new chat.", 500) from exc
         return self._store.get_session(new.id) or new
 
-    def list_sessions(self) -> list[Session]:
-        return self._store.list_sessions()
+    def list_sessions(self, owner: Optional[str] = None) -> list[Session]:
+        """`owner` given: that visitor's chats only.  None: every chat but the demo (the local single-user app)."""
+        return self._store.list_sessions(owner)
 
     def get_session(self, sid: str) -> SessionDetail:
         session = self._require_session(sid)
@@ -561,7 +577,7 @@ class ReportLensService:
         return SessionDetail(**{name: getattr(session, name) for name in Session.model_fields}, messages=messages)
 
     def rename_session(self, sid: str, title: str) -> Session:
-        self._require_session(sid)
+        self._require_writable(sid)
         try:
             self._store.rename_session(sid, title)
         except ValueError as exc:
@@ -569,7 +585,7 @@ class ReportLensService:
         return self._require_session(sid)
 
     def delete_session(self, sid: str) -> None:
-        self._require_session(sid)
+        self._require_writable(sid)
         with self._lock_for(self._state_locks, sid):
             run = self._runs.get(sid)
             if run is not None:
@@ -588,13 +604,16 @@ class ReportLensService:
             self._load_locks.pop(sid, None)
 
     # ------------------------------------------------------------------------------------------- document
-    def attach_document(self, sid: str, filename: str, tmp_path: Path) -> Session:
+    def attach_document(self, sid: str, filename: str, tmp_path: Path, llm: Optional[Settings] = None) -> Session:
         """Validate and adopt an uploaded PDF.  On success `tmp_path` is moved away; on any error it is left for the caller to
-        delete.  Allowed only while the session is empty or its previous upload failed (one document per session)."""
+        delete.  Allowed only while the session is empty or its previous upload failed (one document per session).
+        `llm`: the request's own provider and key (a visitor's), default the server's."""
         tmp_path = Path(tmp_path)
-        self._budget.check(reserve_usd=self._reserve())            # 402 before any PDF work, so a refused upload costs nothing
+        s = llm or self._settings
+        if s.key_source == "server":
+            self._budget.check(reserve_usd=self._reserve())        # 402 before any PDF work, so a refused upload costs nothing
         with self._lock_for(self._state_locks, sid):
-            session = self._require_session(sid)
+            session = self._require_writable(sid)
             if session.state == "locked":
                 raise ServiceError("document_locked", "The document is locked after the first question. Start a new chat to use a different one.", 409)
             if session.state in ("indexing", "ready"):
@@ -623,11 +642,15 @@ class ReportLensService:
             _move_into_place(tmp_path, folder / doc_name)
 
             doc = DocumentInfo(id=new_id(), filename=display_filename(filename, doc_name), doc_name=doc_name, size_bytes=size,
-                               page_count=info.page_count, status="indexing", stage="queued", progress=0.0, created_at=now_iso())
+                               page_count=info.page_count, status="indexing", stage="queued", progress=0.0, created_at=now_iso(),
+                               key_source=s.key_source)
             self._store.put_document(sid, doc)
             self._budget.invalidate()
             try:
-                self._indexer.start(sid, folder / doc_name)
+                if llm is not None:
+                    self._indexer.start(sid, folder / doc_name, settings=llm)
+                else:
+                    self._indexer.start(sid, folder / doc_name)
             except Exception:  # noqa: BLE001 - never leave a document in 'indexing' that nothing is indexing
                 log.exception("could not start indexing for session %s", sid)
                 self._store.update_document(sid, status="failed", stage="failed", error="Indexing could not be started. Please upload the document again.")
@@ -702,20 +725,24 @@ class ReportLensService:
                 "openai_configured": self._settings.openai_configured, "demo_mock": self._settings.demo_mock, "environment": env}
 
     # ------------------------------------------------------------------------------------------- ask
-    async def ask(self, sid: str, content: str) -> AsyncIterator[tuple[str, dict]]:
+    async def ask(self, sid: str, content: str, llm: Optional[Settings] = None) -> AsyncIterator[tuple[str, dict]]:
         """Yield (sse_event_name, payload) per docs/ARCHITECTURE.md section 6.  Validation problems raise ServiceError before
-        the first event.  Closing the generator (client disconnect) cancels the agent run; scoring carries on regardless."""
+        the first event.  Closing the generator (client disconnect) cancels the agent run; scoring carries on regardless.
+        `llm`: the request's own provider and key (a visitor's), default the server's."""
+        s = llm or self._settings
+        engine = self._qa.with_settings(llm) if llm is not None and hasattr(self._qa, "with_settings") else self._qa
         question = (content or "").strip()
         if not question:
             raise ServiceError("empty_question", "Type a question first.", 400)
         if len(question) > MAX_QUESTION_CHARS:
             raise ServiceError("question_too_long", f"Questions are limited to {MAX_QUESTION_CHARS} characters.", 400)
-        doc = (await asyncio.to_thread(self._require_session, sid)).document
+        doc = (await asyncio.to_thread(self._require_writable, sid)).document
         if doc is None or doc.status != "ready":
             raise ServiceError("document_not_ready", "The document is not ready yet. You can ask once it has been indexed.", 409)
-        if not self._settings.openai_configured:
+        if not s.openai_configured:
             raise ServiceError("openai_not_configured", "OpenAI API key is not configured - add OPENAI_API_KEY to .env and restart.", 503)
-        await asyncio.to_thread(self._budget.check, reserve_usd=self._reserve())
+        if s.key_source == "server":
+            await asyncio.to_thread(self._budget.check, reserve_usd=self._reserve())
         if sid in self._runs:                          # no await between this check and the registration below
             raise ServiceError("session_busy", "The previous question is still being answered. Wait for it to finish or press Stop.", 409)
         run = self._runs[sid] = _Run()
@@ -724,7 +751,8 @@ class ReportLensService:
         assistant: Optional[Message] = None
         partial: list[str] = []
         try:
-            turn = asyncio.ensure_future(asyncio.to_thread(self._begin_turn, sid, question))
+            turn = asyncio.ensure_future(asyncio.to_thread(self._begin_turn, sid, question) if s.key_source == "server"
+                                         else asyncio.to_thread(self._begin_turn, sid, question, s.key_source))
             try:
                 user_msg, assistant, history = await asyncio.shield(turn)
             except SessionNotFound as exc:
@@ -736,7 +764,7 @@ class ReportLensService:
             yield "message_start", {"user_message": _dump(user_msg), "message_id": mid, "created_at": assistant.created_at}
             try:
                 if history:                            # runs beside the agent; only the scoring needs its result
-                    rewrite = asyncio.create_task(self._rewrite(question, history), name=f"rewrite-{mid[:8]}")
+                    rewrite = asyncio.create_task(self._rewrite(question, history, engine), name=f"rewrite-{mid[:8]}")
                 try:
                     res = await self._lease_for_answers(sid)
                 except ServiceError as exc:
@@ -747,7 +775,7 @@ class ReportLensService:
 
                 inbox: asyncio.Queue = asyncio.Queue()
                 run.thread = self._spawn_engine(asyncio.get_running_loop(), inbox, run, dict(
-                    session_id=sid, doc=doc, question=question, history=history, ctx=ctx, cancel=run.cancel))
+                    session_id=sid, doc=doc, question=question, history=history, ctx=ctx, cancel=run.cancel), engine)
                 final: Optional[dict] = None
                 failure: Optional[BaseException] = None
                 while True:
@@ -793,7 +821,7 @@ class ReportLensService:
                     sink = asyncio.Queue()
                     pending_rewrite, rewrite = rewrite, None     # the scoring task owns the rewrite from here on
                     standalone = (lambda: pending_rewrite) if pending_rewrite is not None else (lambda: self._constant(question))
-                    self._start_eval(sid, mid, standalone, answer.content, selected, n_read, sink)
+                    self._start_eval(sid, mid, standalone, answer.content, selected, n_read, sink, settings=s)
                 yield "answer_done", {"message": _dump(answer)}
                 if sink is not None:
                     yield "eval_started", {"message_id": mid, "metrics": list(_METRICS), "n_contexts": len(selected)}
@@ -819,13 +847,13 @@ class ReportLensService:
             if assistant is not None:
                 await self._abandon(run, assistant, partial)
 
-    def _begin_turn(self, sid: str, question: str) -> tuple[Message, Message, list[dict]]:
+    def _begin_turn(self, sid: str, question: str, key_source: str = "server") -> tuple[Message, Message, list[dict]]:
         """Persist the question and the (still empty) answer; build the history; title the session on its first question."""
         session = self._require_session(sid)
         previous = self._store.list_messages(sid)
         history = build_history(previous, self._settings.history_turns)
         user = Message(id=new_id(), session_id=sid, role="user", content=question, status="answered", created_at=now_iso())
-        reply = Message(id=new_id(), session_id=sid, role="assistant", status="streaming", created_at=now_iso())
+        reply = Message(id=new_id(), session_id=sid, role="assistant", status="streaming", created_at=now_iso(), key_source=key_source)
         self._store.add_message(user)
         self._store.add_message(reply)
         if session.title == DEFAULT_TITLE and not any(m.role == "user" for m in previous):
@@ -837,7 +865,8 @@ class ReportLensService:
             _, reply, _ = turn.result()
             self._store.update_message(reply.model_copy(update={"status": "error", "error": "cancelled"}))
 
-    def _spawn_engine(self, loop: asyncio.AbstractEventLoop, inbox: asyncio.Queue, run: _Run, kwargs: dict) -> threading.Thread:
+    def _spawn_engine(self, loop: asyncio.AbstractEventLoop, inbox: asyncio.Queue, run: _Run, kwargs: dict,
+                      engine: Any = None) -> threading.Thread:
         """Run the sync QA generator on a dedicated daemon thread, forwarding every event (and its failure) to `inbox`."""
         def post(item: Any) -> None:
             try:
@@ -848,7 +877,7 @@ class ReportLensService:
         def work() -> None:
             events = None
             try:
-                events = self._qa.ask(**kwargs)
+                events = (engine or self._qa).ask(**kwargs)
                 for event in events:
                     post(event)
                     if run.cancel.is_set():
@@ -940,10 +969,10 @@ class ReportLensService:
     async def _constant(value: _T) -> _T:
         return value
 
-    async def _rewrite(self, question: str, history: list[dict]) -> str:
+    async def _rewrite(self, question: str, history: list[dict], engine: Any = None) -> str:
         """Standalone form of a follow-up question (RAGAS user_input).  Any failure falls back to the question as typed."""
         try:
-            text = await asyncio.to_thread(self._qa.rewrite_question, history, question)
+            text = await asyncio.to_thread((engine or self._qa).rewrite_question, history, question)
         except Exception:  # noqa: BLE001
             log.warning("question rewrite failed; scoring with the question as typed", exc_info=True)
             return question
@@ -962,6 +991,20 @@ class ReportLensService:
             return "no_contexts"
         return None
 
+    def _new_evaluator(self, settings: Settings) -> Any:
+        """A one-off evaluator for another provider / key (a visitor's own): the caller closes it after the run."""
+        if settings.eval_in_subprocess:
+            from .eval_child import ChildEvaluator
+
+            return ChildEvaluator(settings)
+        if settings.low_memory:
+            from .lowmem import stub_datasets_for_ragas
+
+            stub_datasets_for_ragas()
+        from .evaluation import Evaluator
+
+        return Evaluator(settings)
+
     def _get_evaluator(self) -> "Evaluator":
         if self._evaluator is None:
             if self._settings.eval_in_subprocess:       # the web process never imports RAGAS: a short-lived child scores each answer
@@ -979,12 +1022,13 @@ class ReportLensService:
         return self._evaluator
 
     def _start_eval(self, sid: str, mid: str, question: Callable[[], Awaitable[str]], answer: str, contexts: list[ContextPage],
-                    n_read: int, sink: Optional[asyncio.Queue]) -> asyncio.Task:
+                    n_read: int, sink: Optional[asyncio.Queue], *, settings: Optional[Settings] = None) -> asyncio.Task:
         """Start scoring as a task of its own (strongly referenced here, so it outlives the request that started it).
         `question` is a factory so nothing is created when the run is refused."""
         if mid in self._eval_tasks:
             raise ServiceError("evaluation_in_progress", "This answer is already being evaluated.", 409)
-        task = asyncio.get_running_loop().create_task(self._eval_job(sid, mid, question(), answer, contexts, n_read, sink), name=f"eval-{mid[:8]}")
+        task = asyncio.get_running_loop().create_task(self._eval_job(sid, mid, question(), answer, contexts, n_read, sink, settings),
+                                                      name=f"eval-{mid[:8]}")
         self._eval_tasks[mid] = task
 
         def finished(t: asyncio.Task) -> None:
@@ -997,7 +1041,9 @@ class ReportLensService:
         return task
 
     async def _eval_job(self, sid: str, mid: str, question: Awaitable[str], answer: str, contexts: list[ContextPage], n_read: int,
-                        sink: Optional[asyncio.Queue]) -> EvalScores:
+                        sink: Optional[asyncio.Queue], settings: Optional[Settings] = None) -> EvalScores:
+        own = settings is not None and settings is not self._settings and not self._evaluator_injected
+        evaluator: Any = None
         def on_metric(metric: str, value: Optional[float], error: Optional[str]) -> None:
             if sink is not None:
                 sink.put_nowait(("eval_result", {"message_id": mid, "metric": metric, "value": value, "error": error}))
@@ -1006,7 +1052,7 @@ class ReportLensService:
             await asyncio.to_thread(self._store_eval, sid, mid, EvalScores(status="running", n_contexts_input=n_read, n_contexts_scored=len(contexts)))
             # The first call imports RAGAS (seconds, or tens of seconds on a 0.1 CPU host): never on the event loop, or every
             # stream would stop pinging and every request would stall meanwhile.
-            evaluator = await asyncio.to_thread(self._get_evaluator)
+            evaluator = await asyncio.to_thread(self._new_evaluator, settings) if own else await asyncio.to_thread(self._get_evaluator)
             scores = await evaluator.evaluate(await question, answer, contexts, on_metric=on_metric)
             scores = scores.model_copy(update={"n_contexts_input": n_read})
         except asyncio.CancelledError:
@@ -1018,6 +1064,12 @@ class ReportLensService:
         except Exception:  # noqa: BLE001 - the evaluator promises not to raise; a fake or a bug must still end the stream
             log.exception("evaluation of message %s failed unexpectedly", mid)
             scores = EvalScores(status="failed", errors={m: "Scoring failed unexpectedly." for m in _METRICS}, n_contexts_input=n_read)
+        finally:
+            if own and evaluator is not None:              # a visitor's evaluator holds their key: never kept for the next request
+                try:
+                    await evaluator.aclose()
+                except Exception:  # noqa: BLE001
+                    log.debug("closing a per-request evaluator failed", exc_info=True)
         await asyncio.to_thread(self._store_eval, sid, mid, scores)
         if self._settings.low_memory:
             await asyncio.to_thread(_trim_memory)         # give the scoring buffers back to the OS: the host counts every MB
@@ -1034,15 +1086,18 @@ class ReportLensService:
         except Exception:  # noqa: BLE001 - e.g. the store was closed during shutdown
             log.warning("could not save the scores of message %s", mid, exc_info=True)
 
-    async def evaluate_message(self, sid: str, mid: str) -> EvalScores:
+    async def evaluate_message(self, sid: str, mid: str, llm: Optional[Settings] = None) -> EvalScores:
         """(Re-)run RAGAS for a stored answer and persist the result.  Scoring is a task of its own: if this request is
         dropped the scores are still saved."""
+        await asyncio.to_thread(self._require_writable, sid)
         msg = await asyncio.to_thread(self.get_message, sid, mid)
         if msg.role != "assistant" or msg.status not in _ANSWER_OK:
             raise ServiceError("not_evaluable", "Only a finished answer can be evaluated.", 409)
         if mid in self._eval_tasks:
             raise ServiceError("evaluation_in_progress", "This answer is already being evaluated.", 409)
-        await asyncio.to_thread(self._budget.check, reserve_usd=self._reserve())
+        s = llm or self._settings
+        if s.key_source == "server":
+            await asyncio.to_thread(self._budget.check, reserve_usd=self._reserve())
         contexts = await asyncio.to_thread(self._store.get_contexts, mid)
         n_read = len({c.page for c in contexts})
         reason = self._skip_reason(msg.content, contexts)
@@ -1052,12 +1107,13 @@ class ReportLensService:
             return scores
         selected = select_eval_contexts(contexts, msg.citations, self._settings.eval_max_contexts)
         rerun = msg.evaluation is not None and msg.evaluation.status in ("done", "partial", "failed")
-        task = self._start_eval(sid, mid, lambda: self._standalone_for(sid, mid), msg.content, selected, n_read, None)
-        if rerun:                                      # the stored row only ever shows one scoring: bill the repeats here
+        engine = self._qa.with_settings(llm) if llm is not None and hasattr(self._qa, "with_settings") else None
+        task = self._start_eval(sid, mid, lambda: self._standalone_for(sid, mid, engine), msg.content, selected, n_read, None, settings=s)
+        if rerun and s.key_source == "server":         # the stored row only ever shows one scoring: bill the repeats here
             self._budget.charge(self._settings.eval_cost_estimate_usd)
         return await asyncio.shield(task)
 
-    async def _standalone_for(self, sid: str, mid: str) -> str:
+    async def _standalone_for(self, sid: str, mid: str, engine: Any = None) -> str:
         """The standalone question behind a stored answer (rewritten again when the chat had history before it)."""
         messages = await asyncio.to_thread(self._store.list_messages, sid)
         at = next((i for i, m in enumerate(messages) if m.id == mid), None)
@@ -1065,7 +1121,7 @@ class ReportLensService:
             return ""
         question = messages[at - 1].content
         history = build_history(messages[: at - 1], self._settings.history_turns)
-        return await self._rewrite(question, history) if history else question
+        return await self._rewrite(question, history, engine) if history else question
 
     # ------------------------------------------------------------------------------------------- shutdown
     async def aclose(self) -> None:

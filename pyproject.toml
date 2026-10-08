@@ -1,11 +1,15 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]                  # PEP 639 licence fields
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "reportlens"
+name = "reportlens"                   # the Python package of "Annual Report Lens"
 version = "0.1.0"
-description = "Annual-report Q&A with PageIndex retrieval, page-level citations and RAGAS evaluation"
+description = "Annual Report Lens: chat with an annual report - vectorless PageIndex retrieval, page-level citations with highlights, live RAGAS evaluation"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "sagarutkarsh1", email = "sagarutkarsh1@gmail.com" }]
 requires-python = ">=3.10"
 dependencies = [
   # PageIndex SDK (local "Flash" mode). Pinned: the SDK releases roughly weekly and its API moves.
@@ -26,6 +30,9 @@ dependencies = [
   "pydantic>=2",
   "python-dotenv",
 ]
+
+[project.urls]
+Homepage = "https://github.com/sagarutkarsh1"
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-asyncio", "httpx", "reportlab"]

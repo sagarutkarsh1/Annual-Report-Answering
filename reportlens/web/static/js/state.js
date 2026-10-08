@@ -7,6 +7,9 @@ export const state = {
   config: null, // GET /api/config
   health: null, // GET /api/health
   auth: { required: false }, // GET /api/auth: is there an access code (the sidebar shows "Sign out" only then)
+  demo: null, // GET /api/demo: the read-only demo chat ({available, session_id, title, ...})
+  demoOnly: false, // not signed in, browsing the demo: no chats of one's own
+  llm: null, // the visitor's own provider ({label, model}) when they saved a key (llm.js), else null = the server's model
   sessions: [], // Session[] (newest first)
   activeId: null,
   detail: null, // SessionDetail of the active session (messages live here while streaming)
@@ -28,8 +31,9 @@ export function sessionById(sid) {
   return state.sessions.find((s) => s.id === sid) || null;
 }
 
-/** Replaces (or inserts at the top) a session in the list without re-sorting the rest. */
+/** Replaces (or inserts at the top) a session in the list without re-sorting the rest.  The read-only demo never joins the list. */
 export function upsertSession(session) {
+  if (session.read_only) return;
   const list = state.sessions.slice();
   const i = list.findIndex((s) => s.id === session.id);
   if (i >= 0) list[i] = { ...list[i], ...stripMessages(session) };

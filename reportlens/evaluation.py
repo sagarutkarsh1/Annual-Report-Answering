@@ -55,6 +55,7 @@ _RELEVANCY_TEMPERATURE = 0.3
 # Reasoning tokens count against max_completion_tokens, so a smaller budget truncates the JSON verdicts.
 _MIN_REASONING_COMPLETION_TOKENS = 4096
 _PLACEHOLDER_KEY = "sk-not-needed"  # AsyncOpenAI insists on a key even for a keyless local gateway (custom base_url)
+NO_EMBEDDINGS = "Not available with this model provider (it has no embeddings API, which answer relevancy needs)"
 _MAX_REASON_CHARS = 400
 
 # ----------------------------------------------------------------------------------------------- text helpers
@@ -132,7 +133,7 @@ def _describe_error(exc: BaseException) -> str:
             return "Judge output was cut off (raise RAGAS_JUDGE_MAX_TOKENS)"
         cur = cur.__cause__ or cur.__context__
     first_line = (str(exc).strip().splitlines() or [""])[0]
-    return re.sub(r"sk-[A-Za-z0-9_\-]{8,}", "sk-***", f"{type(exc).__name__}: {first_line}")[:200]
+    return re.sub(r"(?:sk-|gsk_|xai-|tgp_|AIza)[A-Za-z0-9_\-]{8,}", "sk-***", f"{type(exc).__name__}: {first_line}")[:200]
 
 
 # ----------------------------------------------------------------------------------------------- judge plumbing
@@ -223,7 +224,7 @@ class _Runtime:
     loop: asyncio.AbstractEventLoop
     client: AsyncOpenAI
     faithfulness: Faithfulness
-    answer_relevancy: AnswerRelevancy
+    answer_relevancy: Optional[AnswerRelevancy]          # None: no embeddings model (a provider without an embeddings API)
     context_precision: ContextPrecisionWithoutReference
 
 
@@ -322,17 +323,20 @@ class Evaluator:
                 return value
             return (await metric.ascore(user_input=question, response=response, retrieved_contexts=texts)).value
 
+        relevancy_possible = runtime.answer_relevancy is not None
         outcomes = dict(zip(METRICS, await asyncio.gather(
             self._run_metric("faithfulness", faithfulness, on_metric),
-            self._run_metric("answer_relevancy", answer_relevancy, on_metric),
+            self._run_metric("answer_relevancy", answer_relevancy, on_metric) if relevancy_possible
+            else self._unavailable("answer_relevancy", NO_EMBEDDINGS, on_metric),
             self._run_metric("context_precision", context_precision, on_metric),
         )))
 
         values = {m: v for m, (v, _) in outcomes.items()}
         errors = {m: e for m, (_, e) in outcomes.items() if e}
         n_ok = sum(v is not None for v in values.values())
+        expected = len(METRICS) if relevancy_possible else len(METRICS) - 1
         scores = EvalScores(
-            status="done" if n_ok == len(METRICS) else "partial" if n_ok else "failed",
+            status="done" if n_ok == expected else "partial" if n_ok else "failed",
             **values,
             errors=errors,
             context_verdicts=sorted(verdict_rows, key=lambda r: r["index"]),
@@ -361,6 +365,11 @@ class Evaluator:
             log.warning("ragas metric %s failed: %s", name, error, exc_info=log.isEnabledFor(logging.DEBUG))
         await self._notify(on_metric, name, value, error)
         return value, error
+
+    async def _unavailable(self, name: str, reason: str, on_metric: Optional[OnMetric]) -> tuple[Optional[float], Optional[str]]:
+        """A metric this configuration cannot compute at all (not a failure: nothing to retry)."""
+        await self._notify(on_metric, name, None, reason)
+        return None, reason
 
     @staticmethod
     async def _notify(on_metric: Optional[OnMetric], name: str, value: Optional[float], error: Optional[str]) -> None:
@@ -399,11 +408,14 @@ class Evaluator:
         # Own LLM object so only question generation gets a non-greedy temperature (reasoning judges ignore it).
         llm_questions = llm if reasoning else llm_factory(
             s.judge_model, client=client, max_tokens=s.judge_max_tokens, temperature=_RELEVANCY_TEMPERATURE, top_p=1.0)
-        embeddings = embedding_factory("openai", model=s.embedding_model, client=client)
+        relevancy = None
+        if s.embedding_model:
+            embeddings = embedding_factory("openai", model=s.embedding_model, client=client)
+            relevancy = AnswerRelevancy(llm=llm_questions, embeddings=embeddings)
         return _Runtime(
             loop=loop,
             client=client,
             faithfulness=Faithfulness(llm=llm),
-            answer_relevancy=AnswerRelevancy(llm=llm_questions, embeddings=embeddings),
+            answer_relevancy=relevancy,
             context_precision=_build_context_precision(llm),
         )

@@ -94,11 +94,18 @@ _MIGRATIONS: tuple[tuple[str, ...], ...] = (
                data       TEXT NOT NULL
            )""",
     ),
+    (  # v2: who a chat belongs to ('' = nobody in particular: the local single-user app; DEMO_OWNER = the read-only demo)
+        "ALTER TABLE sessions ADD COLUMN owner TEXT NOT NULL DEFAULT ''",
+        "CREATE INDEX idx_sessions_owner ON sessions (owner, updated_seq)",
+    ),
 )
+
+# The owner of the built-in, read-only demo chat (visitor owners are 32-hex ids, so this can never collide with one).
+DEMO_OWNER = "demo"
 
 # state per contract 4.5: no document -> empty | failed | indexing | ready with >=1 user message -> locked, else ready.
 _SESSION_SELECT = """
-SELECT s.id, s.title, s.created_at, s.updated_at,
+SELECT s.id, s.title, s.created_at, s.updated_at, s.owner,
        d.data AS doc_data, d.pi_doc_id AS pi_doc_id,
        CASE
            WHEN d.session_id IS NULL    THEN 'empty'
@@ -168,6 +175,8 @@ def _session_from_row(row: sqlite3.Row) -> Session:
         updated_at=row["updated_at"],
         document=_load_document(row["doc_data"], row["pi_doc_id"]),
         message_count=row["message_count"],
+        owner=row["owner"],
+        read_only=row["owner"] == DEMO_OWNER,
     )
 
 
@@ -291,27 +300,42 @@ class Store:
         )
 
     # ----------------------------------------------------------------------------------------------- sessions
-    def create_session(self, title: str = DEFAULT_TITLE) -> Session:
+    def create_session(self, title: str = DEFAULT_TITLE, *, owner: str = "", sid: Optional[str] = None) -> Session:
+        """`sid` is for the demo chat only (a fixed, well-known id); everything else gets a fresh random one."""
         title = _clean_title(title) or DEFAULT_TITLE
-        sid, now = new_id(), now_iso()
+        sid, now = sid or new_id(), now_iso()
         with self._write() as conn:
             conn.execute(
-                "INSERT INTO sessions (id, title, created_at, updated_at, updated_seq) "
-                f"VALUES (?, ?, ?, ?, {_NEXT_SEQ})",
-                (sid, title, now, now),
+                "INSERT INTO sessions (id, title, created_at, updated_at, updated_seq, owner) "
+                f"VALUES (?, ?, ?, ?, {_NEXT_SEQ}, ?)",
+                (sid, title, now, now, owner),
             )
-        return Session(id=sid, title=title, state="empty", created_at=now, updated_at=now)
+        return Session(id=sid, title=title, state="empty", created_at=now, updated_at=now, owner=owner,
+                       read_only=owner == DEMO_OWNER)
 
     def get_session(self, sid: str) -> Optional[Session]:
         with self._read() as conn:
             row = conn.execute(f"{_SESSION_SELECT} WHERE s.id = ?", (sid,)).fetchone()
         return _session_from_row(row) if row else None
 
-    def list_sessions(self) -> list[Session]:
-        """Most recently active first.  One query: state and message_count are computed in SQL."""
+    def session_owner(self, sid: str) -> Optional[str]:
+        """The owner of `sid`, or None when there is no such chat (cheap: one indexed lookup, for the per-request access check)."""
         with self._read() as conn:
-            rows = conn.execute(f"{_SESSION_SELECT} ORDER BY s.updated_seq DESC").fetchall()
+            row = conn.execute("SELECT owner FROM sessions WHERE id = ?", (sid,)).fetchone()
+        return row["owner"] if row else None
+
+    def list_sessions(self, owner: Optional[str] = None) -> list[Session]:
+        """Most recently active first.  One query: state and message_count are computed in SQL.  `owner` given: only that
+        owner's chats; None: every chat except the demo (the local single-user app)."""
+        where, params = ("WHERE s.owner = ?", (owner,)) if owner is not None else ("WHERE s.owner != ?", (DEMO_OWNER,))
+        with self._read() as conn:
+            rows = conn.execute(f"{_SESSION_SELECT} {where} ORDER BY s.updated_seq DESC", params).fetchall()
         return [_session_from_row(r) for r in rows]
+
+    def count_sessions(self) -> int:
+        """Chats that count towards MAX_SESSIONS (the demo does not)."""
+        with self._read() as conn:
+            return conn.execute("SELECT COUNT(*) FROM sessions WHERE owner != ?", (DEMO_OWNER,)).fetchone()[0]
 
     def rename_session(self, sid: str, title: str) -> None:
         """Trims, collapses whitespace and caps the title at 120 chars.  Does not count as activity (the session keeps
@@ -495,15 +519,17 @@ class Store:
         """Totals for the spend budget over every session, or only `sid`.  A document counts once per index it paid for
         (key = PageIndex doc id, or the document row id while that is not known yet); a failed upload counts only when it got
         as far as spending something (progress > 0).  Keys in `exclude_index_keys` were already moved to the ledger."""
-        where, params = ("WHERE session_id = ?", (sid,)) if sid else ("", ())
+        # The demo chat was paid for once, offline: its stored costs never count against this deployment's budget.
+        not_demo = f"session_id NOT IN (SELECT id FROM sessions WHERE owner = '{DEMO_OWNER}')"
+        where, params = (f"WHERE session_id = ? AND {not_demo}", (sid,)) if sid else (f"WHERE {not_demo}", ())
         with self._read() as conn:
             docs = conn.execute(f"SELECT status, pi_doc_id, data FROM documents {where}", params).fetchall()
-            msgs = conn.execute(f"SELECT status, data FROM messages WHERE role = 'assistant' {'AND session_id = ?' if sid else ''}", params).fetchall()
+            msgs = conn.execute(f"SELECT status, data FROM messages {where} AND role = 'assistant'", params).fetchall()
         excluded = set(exclude_index_keys)
         keys: dict[str, None] = {}
         for row in docs:
             doc = _load_document(row["data"], row["pi_doc_id"])
-            if doc is None or (row["status"] == "failed" and not doc.progress > 0):
+            if doc is None or (row["status"] == "failed" and not doc.progress > 0) or doc.key_source != "server":
                 continue
             key = doc.pi_doc_id or f"doc:{doc.id}"
             if key not in excluded:
@@ -511,7 +537,7 @@ class Store:
         cost, unpriced, failed, evaluations = 0.0, 0, 0, 0
         for row in msgs:
             msg = _load_model(Message, row["data"])
-            if msg is None:
+            if msg is None or msg.key_source != "server":          # paid with the visitor's own key: not this budget's business
                 continue
             known = msg.usage.cost_usd if msg.usage is not None else None
             if known is not None:

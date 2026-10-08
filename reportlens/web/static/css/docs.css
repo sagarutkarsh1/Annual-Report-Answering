@@ -1,0 +1,42 @@
+/* The /docs page around Swagger UI (always light: Swagger UI's own theme is light only). */
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #09090b;
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+}
+.docs-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e4e4e7;
+  font-size: 15px;
+}
+.docs-head__brand {
+  font-weight: 600;
+  color: #2d72cf;
+  text-decoration: none;
+}
+.docs-head__sep {
+  color: #9f9fa9;
+}
+.docs-head__link {
+  margin-left: auto;
+  color: #2762b8;
+  font-size: 13px;
+}
+.docs-note {
+  max-width: 1420px;
+  margin: 12px auto 0;
+  padding: 0 20px;
+  color: #52525b;
+  font-size: 13px;
+  line-height: 18px;
+}
+@media (max-width: 600px) {
+  .docs-head__link {
+    margin-left: 0;
+  }
+}

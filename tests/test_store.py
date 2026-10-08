@@ -23,6 +23,7 @@ from reportlens.models import (
     Usage,
 )
 from reportlens.store import (
+    _MIGRATIONS,
     INTERRUPTED_ANSWER_ERROR,
     INTERRUPTED_INDEXING_ERROR,
     Store,
@@ -695,7 +696,7 @@ def test_schema_is_versioned_and_reopen_is_idempotent(tmp_path):
     second = Store(path)      # migration runner must be a no-op now
     third = Store(path)       # ... even with two live instances
     try:
-        assert raw_rows(second, "PRAGMA user_version") == [(1,)]
+        assert raw_rows(second, "PRAGMA user_version") == [(len(_MIGRATIONS),)]
         tables = {r[0] for r in raw_rows(second, "SELECT name FROM sqlite_master WHERE type = 'table'")}
         assert {"sessions", "documents", "messages", "message_contexts"} <= tables
         assert third.get_session(sess.id).title == "persisted"
@@ -725,7 +726,7 @@ def test_concurrent_first_open_migrates_exactly_once(tmp_path):
         t.join(timeout=60)
     try:
         assert not errors, errors
-        assert raw_rows(opened[0], "PRAGMA user_version") == [(1,)]
+        assert raw_rows(opened[0], "PRAGMA user_version") == [(len(_MIGRATIONS),)]
     finally:
         for s in opened:
             s.close()

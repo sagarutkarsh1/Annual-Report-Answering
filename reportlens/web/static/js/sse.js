@@ -2,6 +2,7 @@
 // The stream is never retried automatically: replaying a POST would ask the question twice.
 
 import { noteApiError } from "./api.js";
+import { llmHeaders } from "./llmstore.js";
 
 /** Incremental SSE frame parser. Feed text chunks, get complete frames back. */
 export class SSEParser {
@@ -60,7 +61,7 @@ export async function postSSE(url, body, { signal, onEvent }) {
   try {
     response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+      headers: { "Content-Type": "application/json", Accept: "text/event-stream", ...llmHeaders() },
       body: JSON.stringify(body),
       signal,
     });

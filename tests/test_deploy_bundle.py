@@ -56,7 +56,7 @@ def test_dockerfile_follows_the_hosting_requirements():
         assert env in text, env
     assert "pip install --no-cache-dir -r requirements-deploy.txt" in text
     copies = [ln for ln in instructions if ln.startswith("COPY")]
-    assert sorted(c.split()[1] for c in copies) == ["devtools", "reportlens", "requirements-deploy.txt", "samples"]
+    assert sorted(c.split()[1] for c in copies) == ["demo", "devtools", "reportlens", "requirements-deploy.txt", "samples"]
     assert "requirements.lock" not in text
     assert "apt-get" not in text and "gcc" not in text and "build-essential" not in text      # wheels only, no compiler
     assert instructions[-1].startswith('CMD ["python", "-m", "reportlens", "--host", "0.0.0.0"')           # exec form: SIGTERM reaches python
@@ -140,9 +140,11 @@ def built_render(tmp_path_factory) -> Path:
 
 def test_the_render_bundle_holds_exactly_the_managed_items(built_render):
     assert {p.name for p in built_render.iterdir()} == {"Dockerfile", ".dockerignore", ".gitignore", "requirements-deploy.txt", "render.yaml", "README.md",
-                                                        "reportlens", "devtools", "samples"}
+                                                        "reportlens", "devtools", "samples", "demo", "LICENSE", "THIRD_PARTY_NOTICES.md",
+                                                        "SECURITY.md"}
     assert bundle.audit(built_render) == []
-    names = {p.name for p in built_render.rglob("*")}
+    assert "Copyright (c) 2026 sagarutkarsh1" in (built_render / "LICENSE").read_text(encoding="utf-8")
+    names = {p.name for p in built_render.rglob("*") if not p.relative_to(built_render).as_posix().startswith("demo/files/pageindex")}
     assert not names & {".env", "research", "data", "tests", ".venv", "__pycache__", "docs"} and not [n for n in names if n.endswith((".pyc", ".lock"))]
     assert (built_render / "reportlens" / "indexing_worker.py").is_file() and (built_render / "reportlens" / "web" / "static" / "index.html").is_file()
     assert b"\r\n" not in (built_render / "render.yaml").read_bytes() and b"\r\n" not in (built_render / "Dockerfile").read_bytes()
@@ -152,12 +154,13 @@ def test_the_render_readme_is_neutral_and_honest(built_render):
     text = (built_render / "README.md").read_text(encoding="utf-8")
     assert not text.startswith("---") and "hf.space" not in text and "Hugging Face" not in text
     low = text.lower()
-    assert "sent to openai" in low and "temporary" in low and "do not upload confidential" in low and "how to use" in low and "several minutes" in low
+    assert "sent to the model provider" in low and "temporary" in low and "do not upload confidential" in low and "how to use" in low and "several minutes" in low
     assert ".env" in (built_render / ".gitignore").read_text(encoding="utf-8")
 
 
 def test_the_hf_bundle_keeps_its_old_shape(built):
-    assert {p.name for p in built.iterdir()} == {"Dockerfile", ".dockerignore", "requirements-deploy.txt", "README.md", "reportlens", "devtools", "samples"}
+    assert {p.name for p in built.iterdir()} == {"Dockerfile", ".dockerignore", "requirements-deploy.txt", "README.md", "reportlens", "devtools", "samples",
+                                                 "demo", "LICENSE", "THIRD_PARTY_NOTICES.md", "SECURITY.md"}
     assert bundle.audit(built, "hf") == []
     assert (built / "samples" / "sample_annual_report.pdf").is_file() and (built / "devtools" / "mock_openai.py").is_file()
 
@@ -166,10 +169,10 @@ def test_the_space_readme_has_the_front_matter_and_the_honest_disclosure(built):
     text = (built / "README.md").read_text(encoding="utf-8")
     head, _, body = text.removeprefix("---\n").partition("\n---\n")
     meta = dict(line.split(": ", 1) for line in head.splitlines())
-    assert meta["title"] == "ReportLens" and meta["sdk"] == "docker" and meta["app_port"] == "7860" and meta["pinned"] == "false"
+    assert meta["title"] == "Annual Report Lens" and meta["sdk"] == "docker" and meta["app_port"] == "7860" and meta["pinned"] == "false"
     assert meta["emoji"] and meta["colorFrom"] and meta["colorTo"] and 0 < len(meta["short_description"]) <= 60
     low = body.lower()
-    assert "sent to openai" in low and "temporary" in low and "do not upload confidential" in low and "how to use" in low
+    assert "sent to the model provider" in low and "temporary" in low and "do not upload confidential" in low and "how to use" in low
 
 
 def test_a_bundle_of_the_wrong_flavour_is_flagged(built, built_render):

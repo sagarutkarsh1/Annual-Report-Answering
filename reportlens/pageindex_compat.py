@@ -277,6 +277,85 @@ def is_patched() -> bool:
     return _patched_text
 
 
+# ------------------------------------------------------------------------------------------------ OpenAI-compatible chat
+_patched_chat_model = False
+_OPENAI_HOSTS = ("api.openai.com",)
+
+
+def _strip_openai_only(model_settings: Any) -> Any:
+    """`prompt_cache_key` is an OpenAI request field (the SDK adds it for every OpenAI-protocol destination); other providers'
+    compatible endpoints may refuse a field they do not know."""
+    import dataclasses
+
+    body = getattr(model_settings, "extra_body", None)
+    if not isinstance(body, dict) or "prompt_cache_key" not in body:
+        return model_settings
+    rest = {k: v for k, v in body.items() if k != "prompt_cache_key"}
+    return dataclasses.replace(model_settings, extra_body=rest or None)
+
+
+def _compat_chat_model(model_id: str, backend: dict) -> Any:
+    """openai-agents' Chat Completions model on the provider's OpenAI-compatible endpoint, with an explicit client (the
+    visitor's key never travels through the process environment)."""
+    import openai
+    from agents import ModelSettings
+    from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
+
+    base_url = backend.get("base_url")
+    host = (urlsplit(base_url or "").hostname or "").lower()
+    keep_openai_fields = host in _OPENAI_HOSTS
+
+    class CompatChatModel(OpenAIChatCompletionsModel):
+        def _clean(self, args: tuple, kwargs: dict) -> tuple[tuple, dict]:
+            if keep_openai_fields:
+                return args, kwargs
+            args = tuple(_strip_openai_only(a) if isinstance(a, ModelSettings) else a for a in args)
+            kwargs = {k: _strip_openai_only(v) if isinstance(v, ModelSettings) else v for k, v in kwargs.items()}
+            return args, kwargs
+
+        async def get_response(self, *args: Any, **kwargs: Any) -> Any:
+            args, kwargs = self._clean(args, kwargs)
+            return await super().get_response(*args, **kwargs)
+
+        def stream_response(self, *args: Any, **kwargs: Any) -> Any:
+            args, kwargs = self._clean(args, kwargs)
+            return super().stream_response(*args, **kwargs)
+
+    client = openai.AsyncOpenAI(api_key=backend.get("api_key") or "sk-not-needed", base_url=base_url, max_retries=2)
+    return CompatChatModel(model=model_id, openai_client=client)
+
+
+def _patch_compat_chat_model() -> bool:
+    """Chat-lane models named ``openai/<id>`` with a base URL go to `_compat_chat_model` instead of litellm's model (which
+    would load ~150 MB of litellm into the web process for what is one OpenAI-protocol endpoint).  Guarded like the other
+    patches: if the SDK seam moved, the SDK's own routing stays in charge."""
+    global _patched_chat_model
+    with _PATCH_LOCK:
+        if _patched_chat_model:
+            return True
+        try:
+            from pageindex import local_chat
+        except ImportError as exc:
+            log.warning("PageIndex chat is not importable (%s); OpenAI-compatible providers use litellm", exc)
+            return False
+        original = getattr(local_chat, "_openai_model", None)
+        if original is None:
+            log.warning("PageIndex %s has no chat-model seam; OpenAI-compatible providers use litellm", pageindex_version())
+            return False
+
+        def openai_model(protocol: str, model_name: str, backend: Any = None) -> Any:
+            if (protocol != "responses" and isinstance(model_name, str) and model_name.startswith("openai/")
+                    and isinstance(backend, dict) and backend.get("base_url")):
+                return _compat_chat_model(model_name[len("openai/"):], backend)
+            return original(protocol, model_name, backend)
+
+        openai_model.__wrapped__ = original  # type: ignore[attr-defined]
+        _original_locked[(local_chat, "_openai_model")] = original
+        local_chat._openai_model = openai_model
+        _patched_chat_model = True
+        return True
+
+
 def remove_patches() -> None:
     """Undo `apply_patches` (tests, and an orderly shutdown of an embedding application)."""
     global _patched_text, _patched_locks, _patched_parser
@@ -288,6 +367,8 @@ def remove_patches() -> None:
             setattr(module, name, fn)
         _original_locked.clear()
         _patched_text, _patched_locks, _patched_parser = False, [], False
+        global _patched_chat_model
+        _patched_chat_model = False
 
 
 # ------------------------------------------------------------------------------------------------ environment
@@ -376,7 +457,10 @@ def make_client(settings: Settings, session_id: str, *, for_indexing: bool = Fal
         from reportlens.lowmem import disable_litellm_preload
 
         disable_litellm_preload()
-    configure_openai_env(settings)
+    if not for_indexing and settings.chat_model.startswith("openai/"):
+        _patch_compat_chat_model()
+    if settings.key_source != "visitor":       # a visitor's key travels only inside this client, never through os.environ
+        configure_openai_env(settings)
     store = storage_path(settings, session_id)
     store.mkdir(parents=True, exist_ok=True)
     backend = _backend(settings)

@@ -161,7 +161,9 @@ export class EvalBlock {
     }
   }
 
+  /** No re-run handler (the read-only demo): an empty node, so callers can append it unconditionally. */
   rerunButton(label) {
+    if (!this.onRerun) return document.createTextNode("");
     return h("button", { type: "button", class: "btn btn-sm eval__rerun", text: label, on: { click: () => this.onRerun() } });
   }
 

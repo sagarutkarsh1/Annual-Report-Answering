@@ -28,6 +28,10 @@ services:
         value: "1"
       - key: ALLOWED_HOSTS
         value: .onrender.com           # add your own domain here (comma separated) if you attach one
+      - key: ACCESS_REQUEST_EMAIL      # shown on the access-code screen ("No code yet? Email ... to request one"); public anyway
+        value: sagarutkarsh1@gmail.com
+      - key: VISITOR_KEYS              # visitors' own provider keys: off | optional | required (= your OpenAI key is never used for them)
+        value: optional
       - key: BUDGET_USD_TOTAL          # estimated spend per run of the service (resets on every wake-up!): the OpenAI-side limit is the real ceiling
         value: "10"
       - key: MAX_SESSIONS

@@ -965,7 +965,8 @@ def test_static_front_end_is_present():
 
 def test_front_end_calls_only_routes_the_server_has(app):
     """Contract check between the UI and the routes: every /api URL literal in js/ matches a registered route."""
-    patterns = [re.compile("^" + re.sub(r"\{[^/]+\}", r"[^/]+", p) + "$") for p in app.openapi()["paths"] if p.startswith("/api")]
+    paths = [*app.openapi()["paths"], app.openapi_url]                   # the schema itself is served by FastAPI (/docs reads it)
+    patterns = [re.compile("^" + re.sub(r"\{[^/]+\}", r"[^/]+", p) + "$") for p in paths if p.startswith("/api")]
     used: set[str] = set()
     for js in (STATIC_DIR / "js").glob("*.js"):
         for literal in re.findall(r"""[`"'](/api/[^`"'?]*)""", js.read_text(encoding="utf-8")):

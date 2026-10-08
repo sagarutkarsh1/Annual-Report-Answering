@@ -171,7 +171,7 @@
   flex: none;
 }
 .brand__word {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 24px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -1759,4 +1759,290 @@ button.step__head:hover {
 }
 .sidebar__signout {
   width: 100%;
+}
+
+/* ---------------------------------------------------------------- Annual Report Lens: login extras, demo chat, credits */
+.login__tagline {
+  text-align: center;
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  margin-top: -4px;
+}
+.login__request {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 6px;
+  color: var(--fg-secondary);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+}
+.login__request a,
+.demo-bar a:not(.btn),
+.login__credit a,
+.sidebar__credit a {
+  color: var(--chip-fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.login__alt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.login__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--fg-meta);
+  font-size: 12px;
+}
+.login__divider::before,
+.login__divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}
+.login__demo {
+  height: 40px;
+  justify-content: center;
+  gap: 8px;
+}
+.login__demo-sub {
+  text-align: center;
+  color: var(--fg-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.login__back {
+  margin-top: 4px;
+  background: none;
+  border: none;
+  color: var(--fg-secondary);
+}
+.login__credit,
+.sidebar__credit {
+  color: var(--fg-meta);
+  font-size: 11px;
+  line-height: 16px;
+}
+.login__credit {
+  margin-top: 16px;
+  text-align: center;
+}
+.nav-item--demo.is-active {
+  background: var(--accent-50);
+  color: var(--accent-600);
+}
+.sidebar__signin,
+.sidebar__request {
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+.badge--demo-chat {
+  flex: none;
+  align-self: center;
+  margin-left: 8px;
+  background: var(--accent-50);
+  color: var(--accent-600);
+  border: 1px solid var(--accent-300);
+}
+.demo-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: var(--col-w);
+  margin: 0 auto;
+  padding: 14px 16px;
+  border: 1px solid var(--accent-300);
+  border-radius: var(--r-card);
+  background: var(--accent-50);
+  box-shadow: var(--shadow-composer);
+}
+.demo-bar[hidden] {
+  display: none;
+}
+.demo-bar__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-600);
+  font-size: 14px;
+  line-height: 20px;
+}
+.demo-bar__text {
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 20px;
+}
+.demo-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.demo-bar__actions .btn {
+  gap: 6px;
+  text-decoration: none;
+}
+.demo-bar__source {
+  color: var(--fg-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.demo-bar__source a {
+  white-space: nowrap;
+}
+.demo-bar__source .icon {
+  display: inline-block;          /* icons are block by default: keep this one on the link's line */
+  vertical-align: -2px;
+  margin-left: 2px;
+}
+
+/* ---------------------------------------------------------------- "Model & API key" dialog */
+dialog.dlg--llm .dlg__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 12px 4px 20px;
+}
+dialog.dlg--llm .dlg__title {
+  flex: 1;
+}
+.llm__body {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.llm__intro {
+  color: var(--fg-secondary);
+  font-size: 13px;
+  line-height: 18px;
+}
+.llm__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.llm__field[hidden] {
+  display: none;
+}
+.llm__label {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+}
+.llm__input {
+  height: 36px;
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-row);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: 14px;
+}
+.llm__input:focus {
+  outline: none;
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 3px var(--accent-200);
+}
+.llm__keyrow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.llm__hint {
+  color: var(--fg-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.llm__hint a {
+  color: var(--chip-fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.llm__more summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-secondary);
+  margin-bottom: 8px;
+}
+.llm__more[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.llm__check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--fg-secondary);
+}
+.llm__check input {
+  margin-top: 2px;
+}
+.llm__status {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 18px;
+  min-height: 18px;
+  overflow-wrap: anywhere;
+}
+.llm__status--ok {
+  color: var(--ok-strong);
+}
+.llm__status--bad {
+  color: var(--bad-strong);
+}
+.llm__status--info {
+  color: var(--fg-secondary);
+}
+.llm__status .icon {
+  flex: none;
+  margin-top: 2px;
+}
+.llm__actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.llm__actions .btn {
+  gap: 6px;
+}
+.llm__spacer {
+  flex: 1;
+}
+.llm__remove {
+  background: none;
+  border-color: transparent;
+  color: var(--fg-secondary);
+}
+.sidebar__llm {
+  width: 100%;
+  flex-wrap: wrap;
+  height: auto;
+  min-height: 36px;
+}
+.sidebar__llm-state {
+  margin-left: auto;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--fg-meta);
 }

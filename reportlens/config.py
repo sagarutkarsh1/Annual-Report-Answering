@@ -58,9 +58,13 @@ def _hosts(v: Optional[str]) -> tuple[str, ...]:
 
 @dataclass(frozen=True)
 class Settings:
-    # --- OpenAI ---
-    openai_api_key: Optional[str] = None
+    # --- Model provider (every provider is reached through its OpenAI-compatible API; see reportlens/providers.py) ---
+    openai_api_key: Optional[str] = None          # the key for whichever provider is configured (name kept for compatibility)
     openai_base_url: Optional[str] = None
+    llm_provider: str = "openai"                  # LLM_PROVIDER: openai | anthropic | gemini | openrouter | groq | ... | custom
+    key_source: str = "server"                    # "server" = this deployment's key (counts towards the budget) | "visitor" = theirs
+    visitor_keys: str = "optional"                # VISITOR_KEYS: may visitors use their own key? off | optional | required
+    allow_custom_llm_url: bool = True             # ALLOW_CUSTOM_LLM_URL: visitors may name any base URL (default: not in PUBLIC_MODE)
     # --- PageIndex (local Flash mode) ---
     pageindex_mode: str = "local"                 # "local" only for now; "cloud" is reserved (needs PAGEINDEX_API_KEY)
     index_model: str = "gpt-5.6-luna"
@@ -97,6 +101,9 @@ class Settings:
     questions_per_hour_per_ip: int = 0            # 0 = unlimited
     index_cost_estimate_usd: float = 0.40         # charged to the budget per indexed document
     eval_cost_estimate_usd: float = 0.08          # charged to the budget per completed evaluation
+    private_chats: bool = False                   # each browser sees only its own chats (default: on whenever ACCESS_CODE is set)
+    access_request_email: Optional[str] = None    # shown on the access-code screen: "email ... to request a code"
+    demo_dir: Optional[Path] = None               # a read-only demo chat to install at start-up (scripts/export_demo.py makes one)
     allowed_hosts: tuple[str, ...] = ()           # Host header allow-list; ".hf.space" also matches every subdomain
     trust_proxy: bool = False                     # believe X-Forwarded-For / X-Forwarded-Host / X-Forwarded-Proto (only behind your own proxy)
     proxy_hops: int = 0                           # 0 = client is the FIRST X-Forwarded-For entry; N = the Nth from the right (N trusted proxies)
@@ -143,6 +150,7 @@ class Settings:
             "max_upload_mb": self.max_upload_mb,
             "max_pages": self.max_pages,
             "openai_configured": self.openai_configured,
+            "llm_provider": self.llm_provider,
             "demo_mock": self.demo_mock,
             "public_mode": self.public_mode,
             "low_memory": self.low_memory,
@@ -153,6 +161,7 @@ def settings_to_json(settings: Settings) -> str:
     """Serialise for a child process (indexing worker).  Carries the API key: hand it over a pipe, never on a command line."""
     data = asdict(settings)
     data["data_dir"] = str(settings.data_dir)
+    data["demo_dir"] = str(settings.demo_dir) if settings.demo_dir else None
     return json.dumps(data)
 
 
@@ -161,6 +170,8 @@ def settings_from_json(text: str) -> Settings:
     known = {f.name for f in fields(Settings)}
     data = {k: v for k, v in data.items() if k in known}
     data["data_dir"] = Path(data["data_dir"])
+    if data.get("demo_dir"):
+        data["demo_dir"] = Path(data["demo_dir"])
     if "allowed_hosts" in data:
         data["allowed_hosts"] = tuple(data["allowed_hosts"])
     return Settings(**data)
@@ -179,6 +190,16 @@ def load_settings(env_file: Optional[os.PathLike | str] = None, environ: Optiona
     data_dir = Path(g("REPORTLENS_DATA_DIR") or (PROJECT_ROOT / "data"))
     if not data_dir.is_absolute():
         data_dir = (PROJECT_ROOT / data_dir).resolve()
+    # DEMO_DIR: unset = demo/ in the project when it holds a demo (tests pass `environ` and never pick one up by accident);
+    # an empty value switches the demo off.
+    raw_demo = g("DEMO_DIR")
+    if raw_demo is None:
+        demo_dir: Optional[Path] = PROJECT_ROOT / "demo" if environ is None else None
+    else:
+        demo_dir = Path(raw_demo.strip()) if raw_demo.strip() else None
+        if demo_dir is not None and not demo_dir.is_absolute():
+            demo_dir = (PROJECT_ROOT / demo_dir).resolve()
+    access_code = (g("ACCESS_CODE") or "").strip() or None
 
     effort = (g("PI_CHAT_REASONING_EFFORT", "medium") or "").strip().lower() or None
     judge_effort = (g("RAGAS_JUDGE_REASONING_EFFORT") or "").strip().lower() or None
@@ -206,9 +227,12 @@ def load_settings(env_file: Optional[os.PathLike | str] = None, environ: Optiona
         """Defaults per deployment kind; an explicit value always wins."""
         return parse(g(name), low_value if low else public_value if public else normal)
 
-    return Settings(
-        openai_api_key=(g("OPENAI_API_KEY") or "").strip() or None,
-        openai_base_url=(g("OPENAI_BASE_URL") or "").strip() or None,
+    visitor_keys = (g("VISITOR_KEYS") or "optional").strip().lower()
+    settings = Settings(
+        visitor_keys=visitor_keys if visitor_keys in ("off", "optional", "required") else "optional",
+        allow_custom_llm_url=_bool(g("ALLOW_CUSTOM_LLM_URL"), not public),
+        openai_api_key=(g("LLM_API_KEY") or g("OPENAI_API_KEY") or "").strip() or None,
+        openai_base_url=(g("LLM_BASE_URL") or g("OPENAI_BASE_URL") or "").strip() or None,
         pageindex_mode=(g("PAGEINDEX_MODE") or "local").strip().lower(),
         index_model=(g("PI_INDEX_MODEL") or "gpt-5.6-luna").strip(),
         chat_model=(g("PI_CHAT_MODEL") or "gpt-5.6-sol").strip(),
@@ -233,9 +257,12 @@ def load_settings(env_file: Optional[os.PathLike | str] = None, environ: Optiona
         max_pages=public_default("MAX_PAGES", _int, 400, 1200),
         history_turns=_int(g("HISTORY_TURNS"), 6),
         demo_mock=_bool(g("REPORTLENS_DEMO_MOCK"), False),
-        access_code=(g("ACCESS_CODE") or "").strip() or None,
+        access_code=access_code,
         session_secret=(g("SESSION_SECRET") or "").strip() or None,
         public_mode=public,
+        private_chats=_bool(g("PRIVATE_CHATS"), access_code is not None),
+        access_request_email=(g("ACCESS_REQUEST_EMAIL") or "").strip() or None,
+        demo_dir=demo_dir,
         budget_usd_total=max(0.0, public_default("BUDGET_USD_TOTAL", _float, 10.0, 0.0)),
         max_sessions=max(0, public_default("MAX_SESSIONS", _int, 30, 0)),
         questions_per_hour_per_ip=max(0, public_default("QUESTIONS_PER_HOUR_PER_IP", _int, 15, 0)),
@@ -250,3 +277,19 @@ def load_settings(env_file: Optional[os.PathLike | str] = None, environ: Optiona
         eval_in_subprocess=_bool(g("EVAL_IN_SUBPROCESS"), low),
         max_open_docs=max(1, tiered("MAX_OPEN_DOCS", _int, 4, 4, 1)),
     )
+    provider = (g("LLM_PROVIDER") or "openai").strip().lower()
+    if provider == "openai":
+        return settings
+    # Another provider for the whole deployment (self-hosting with Claude, Gemini, a local Ollama ...): same mapping as a
+    # visitor's own key, with the owner's key and the model ids from PI_CHAT_MODEL / PI_INDEX_MODEL / RAGAS_*.
+    from .models import ServiceError
+    from .providers import apply_choice, validate_choice
+
+    try:
+        choice = validate_choice({"provider": provider, "api_key": settings.openai_api_key, "base_url": settings.openai_base_url,
+                                  "chat_model": g("PI_CHAT_MODEL"), "index_model": g("PI_INDEX_MODEL"),
+                                  "judge_model": g("RAGAS_JUDGE_MODEL"), "embedding_model": g("RAGAS_EMBEDDING_MODEL")},
+                                 allow_custom_url=True)
+    except ServiceError as exc:
+        raise ValueError(f"LLM_PROVIDER={provider}: {exc.message}") from None
+    return apply_choice(settings, choice, key_source="server")

@@ -29,6 +29,8 @@ RUN pip install --no-cache-dir -r requirements-deploy.txt \
 COPY reportlens ./reportlens
 COPY devtools ./devtools
 COPY samples ./samples
+# The read-only demo chat (empty in the public repository: only its README; the deploy bundle fills it, see demo/README.md)
+COPY demo ./demo
 RUN python -m compileall -q reportlens devtools
 
 # Run-time defaults. Everything here can be overridden by the host (Space variables / Render environment).

@@ -2,7 +2,9 @@
 // Streams are owned by this module and keep running when the user switches to another chat.
 
 import { api, humanMessage, uploadDocument } from "./api.js";
+import { APP_NAME, requestCodeHref } from "./brand.js";
 import { Composer } from "./composer.js";
+import { hasLLM } from "./llmstore.js";
 import { tableDialog } from "./dialog.js";
 import { copyText, h, prefersReducedMotion } from "./dom.js";
 import { formatDuration, plural } from "./format.js";
@@ -83,6 +85,7 @@ export class ChatPane {
         return state.config?.metrics;
       },
       isActiveCite: (mid, n) => this.activeCite?.mid === mid && this.activeCite?.n === n,
+      readOnly: () => !!this.detail?.read_only,
       onOpenPage: (page) => this.openDocPage(page),
       onRetry: (msg) => this.retry(msg),
       onRerunEval: (msg) => this.rerunEval(msg),
@@ -95,7 +98,8 @@ export class ChatPane {
     this.menuBtn = h("button", { type: "button", class: "icon-btn menu-btn", "aria-label": "Open sidebar", html: icon("menu", { size: 18 }), on: { click: () => this.hooks.onOpenSidebar() } });
     this.titleEl = h("div", { class: "chat-title" });
     this.exportBtn = h("button", { type: "button", class: "pill-btn", hidden: true, on: { click: () => this.exportChat() }, html: `${icon("download", { size: 14 })}<span>Export</span>`, "data-tip": "Download this chat as Markdown" });
-    this.header = h("header", { class: "chat-header" }, this.menuBtn, h("h1", { class: "sr-only", text: "ReportLens" }), this.titleEl, this.exportBtn);
+    this.demoBadge = h("span", { class: "badge badge--demo-chat", text: "Demo", hidden: true, "data-tip": "A real chat, shown read-only" });
+    this.header = h("header", { class: "chat-header" }, this.menuBtn, h("h1", { class: "sr-only", text: APP_NAME }), this.titleEl, this.demoBadge, this.exportBtn);
     this.banner = h("div", { class: "banner", role: "status", hidden: true });
     this.col = h("div", { class: "col", id: "col" });
     this.scrollEl = h("div", { class: "scroll", id: "scroll" }, this.col);
@@ -107,7 +111,8 @@ export class ChatPane {
       onOpenDocument: () => this.openDocPage(1),
     });
     this.dropOverlay = h("div", { class: "drop-overlay", hidden: true, "aria-hidden": "true" }, h("div", { class: "drop-overlay__box" }, h("span", { html: icon("file-up", { size: 28 }) }), h("strong", { text: "Drop your PDF to upload" })));
-    this.root.append(this.header, this.banner, this.scrollEl, h("div", { class: "composer-wrap" }, this.fab, this.composer.el), this.dropOverlay);
+    this.demoBar = h("section", { class: "demo-bar", hidden: true, "aria-label": "About this demo" });
+    this.root.append(this.header, this.banner, this.scrollEl, h("div", { class: "composer-wrap" }, this.fab, this.composer.el, this.demoBar), this.dropOverlay);
     this.scroller = new AutoScroll(this.scrollEl, this.fab);
     // Content growth (streaming, late layout) keeps following the bottom only while the user has not scrolled away.
     new ResizeObserver(() => this.scroller.follow()).observe(this.col);
@@ -138,7 +143,7 @@ export class ChatPane {
       const file = e.dataTransfer.files?.[0];
       if (!file) return;
       if (this.canUpload()) this.startUpload(file);
-      else showError({ code: this.detail?.state === "locked" ? "document_locked" : "document_already_uploaded" });
+      else showError({ code: this.detail?.read_only ? "demo_read_only" : this.detail?.state === "locked" ? "document_locked" : "document_already_uploaded" });
     });
   }
 
@@ -159,8 +164,8 @@ export class ChatPane {
     else if (group === "chat") this.syncHero();
     this.updateHeader();
     this.updateComposer();
-    document.title = `${detail.title && detail.title !== "New chat" ? detail.title : detail.document?.filename || "New chat"} · ReportLens`;
-    if (group === "chat" && remount) this.composer.focus();
+    document.title = `${detail.title && detail.title !== "New chat" ? detail.title : detail.document?.filename || "New chat"} · ${APP_NAME}`;
+    if (group === "chat" && remount && !detail.read_only) this.composer.focus();
   }
 
   /** Drops everything shown for the current session (streams keep running in the background). */
@@ -263,19 +268,56 @@ export class ChatPane {
     const title = d.title && d.title !== "New chat" ? d.title : d.document?.filename || "New chat";
     this.titleEl.textContent = title;
     this.titleEl.title = title;
+    this.demoBadge.hidden = !d.read_only;
     this.exportBtn.hidden = !(this.group === "chat" && d.messages.some((m) => m.role === "assistant" && FINAL.has(m.status)));
     const cfg = state.config;
-    const noKey = cfg && !cfg.openai_configured;
-    const usage = usageLevel();
-    const text = noKey ? humanMessage({ code: "openai_not_configured" }) : usage === "exhausted" ? EXHAUSTED_BANNER : usage === "low" ? LOW_BUDGET_BANNER : "";
+    const own = hasLLM() && cfg?.llm?.visitor_keys !== "off";
+    const needKey = cfg?.llm?.visitor_keys === "required" && !own && !cfg?.demo_mock && !d.read_only;
+    const noKey = cfg && !cfg.openai_configured && !own && !needKey && !d.read_only;
+    const usage = own ? "off" : usageLevel(); // your own key: this server's budget does not apply to you
+    const text = needKey ? humanMessage({ code: "own_key_required" }) : noKey ? humanMessage({ code: "openai_not_configured" })
+      : usage === "exhausted" ? EXHAUSTED_BANNER : usage === "low" ? LOW_BUDGET_BANNER : "";
     this.banner.hidden = !text;
-    this.banner.classList.toggle("banner--bad", !noKey && usage === "exhausted");
+    this.banner.classList.toggle("banner--bad", !noKey && !needKey && usage === "exhausted");
     this.banner.replaceChildren(...(text ? [h("span", { html: icon("triangle-alert", { size: 14 }) }), h("span", { text })] : []));
   }
 
   updateComposer() {
     const d = this.detail;
-    this.composer.setState({ mode: d.state, filename: d.document?.filename || "", streaming: this.isAnswering(d.id), blocked: usageLevel() === "exhausted" ? EXHAUSTED_COMPOSER : "" });
+    const readOnly = !!d.read_only;
+    this.composer.el.hidden = readOnly;
+    this.demoBar.hidden = !readOnly;
+    if (readOnly) return this.renderDemoBar();
+    const cfg = state.config;
+    const own = hasLLM() && cfg?.llm?.visitor_keys !== "off";
+    const needKey = cfg?.llm?.visitor_keys === "required" && !own && !cfg?.demo_mock;
+    const blocked = needKey ? "Add your API key under 'Model & API key' to ask" : !own && usageLevel() === "exhausted" ? EXHAUSTED_COMPOSER : "";
+    this.composer.setState({ mode: d.state, filename: d.document?.filename || "", streaming: this.isAnswering(d.id), blocked });
+  }
+
+  /** In place of the composer on the read-only demo: what this is, where the document comes from, and how to try it yourself. */
+  renderDemoBar() {
+    const d = this.detail;
+    const demo = state.demo || {};
+    const answer = d.messages.find((m) => m.role === "assistant" && FINAL.has(m.status));
+    const model = answer?.usage?.model;
+    const text = `A real chat with ${d.document?.filename || "an annual report"}${model ? `, answered by ${model}` : ""}, every answer scored live with RAGAS. Click a citation to see the passage highlighted in the PDF.`;
+    const actions = [];
+    if (state.demoOnly) {
+      actions.push(h("button", { type: "button", class: "btn btn-primary btn-sm", on: { click: () => this.hooks.onSignIn() } }, h("span", { html: icon("log-in", { size: 14 }) }), h("span", { text: "Sign in to ask your own questions" })));
+      if (state.auth?.requestEmail) actions.push(h("a", { class: "btn btn-sm", href: requestCodeHref(state.auth.requestEmail) }, h("span", { html: icon("mail", { size: 14 }) }), h("span", { text: "Request an access code" })));
+    } else {
+      actions.push(h("button", { type: "button", class: "btn btn-primary btn-sm", on: { click: () => this.hooks.onAskAboutDemo() } }, h("span", { html: icon("message-square-plus", { size: 14 }) }), h("span", { text: "Ask your own question about this report" })));
+    }
+    const source = demo.attribution
+      ? h("p", { class: "demo-bar__source" }, h("span", { text: `Source: ${demo.attribution} ` }), demo.attribution_url ? h("a", { href: demo.attribution_url, target: "_blank", rel: "noopener noreferrer", html: `Publisher's site ${icon("external-link", { size: 12 })}` }) : null)
+      : null;
+    this.demoBar.replaceChildren(
+      h("div", { class: "demo-bar__head" }, h("span", { class: "demo-bar__icon", html: icon("sparkles", { size: 16 }) }), h("strong", { text: "Read-only demo" })),
+      h("p", { class: "demo-bar__text", text }),
+      h("div", { class: "demo-bar__actions" }, actions),
+      source,
+    );
   }
 
   /** The usage budget changed (answer finished, or the server said 402): refresh the banner and the composer. */

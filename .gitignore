@@ -11,3 +11,11 @@ node_modules/
 # research/ is kept (reference notes); its throwaway stores are not
 research/**/store*/
 research/**/mock_log*.jsonl
+# The demo chat contains a third-party document (a published annual report): it travels only in the private deploy
+# bundle, never in this public repository.  Only demo/README.md is tracked.
+demo/*
+!demo/README.md
+# Local tool settings (paths on one machine)
+.claude/
+# Screenshots of another product's UI that were used as design references
+research/06-ui-assets/

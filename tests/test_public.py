@@ -498,7 +498,7 @@ def gated(settings: Settings, **changes) -> Settings:
 async def test_no_access_code_means_no_gate(settings, fake):
     app = create_app(settings, fake)
     async with make_client(app) as c:
-        assert (await c.get("/api/auth")).json() == {"required": False, "authenticated": True}
+        assert (await c.get("/api/auth")).json() == {"required": False, "authenticated": True, "request_email": None}
         assert (await c.get("/api/sessions")).status_code == 200
         login = await c.post("/api/login", json={"code": "anything"})
         assert login.status_code == 200 and login.json() == {"required": False, "authenticated": True} and "set-cookie" not in login.headers
@@ -508,9 +508,9 @@ async def test_gate_protects_every_api_route_but_not_the_open_ones_or_static_fil
     sid = fake.add_session("ready").id
     app = create_app(gated(settings), fake)
     async with make_client(app) as c:
-        for method, path in [("GET", "/api/sessions"), ("POST", "/api/sessions"), ("GET", f"/api/sessions/{sid}"), ("GET", "/api/config"),
+        for method, path in [("GET", "/api/sessions"), ("POST", "/api/sessions"), ("GET", f"/api/sessions/{sid}"), ("POST", "/api/config"),
                              ("GET", f"/api/sessions/{sid}/document/file"), ("POST", f"/api/sessions/{sid}/messages"),
-                             ("POST", f"/api/sessions/{sid}/document"), ("DELETE", f"/api/sessions/{sid}"), ("GET", "/api/openapi.json"),
+                             ("POST", f"/api/sessions/{sid}/document"), ("DELETE", f"/api/sessions/{sid}"),
                              ("GET", "/api/nope"), ("PUT", "/api/sessions")]:
             response = await c.request(method, path)
             assert response.status_code == 401, (method, path)
@@ -519,7 +519,8 @@ async def test_gate_protects_every_api_route_but_not_the_open_ones_or_static_fil
         assert not [call for call in fake.calls if call[0] != "health"]                         # the service was never reached
         for path in ("/", "/static/js/main.js", "/static/js/login.js", "/static/css/tokens.css", "/favicon.ico"):
             assert (await c.get(path)).status_code in (200, 204), path
-        assert (await c.get("/api/auth")).json() == {"required": True, "authenticated": False}
+        assert (await c.get("/api/auth")).json() == {"required": True, "authenticated": False, "request_email": None}
+        assert (await c.get("/api/config")).status_code == 200                                   # the read-only demo needs it
         health = await c.get("/api/health")
         assert health.status_code == 200 and set(health.json()) == {"ok", "version"}             # nothing about the environment
 
@@ -535,7 +536,7 @@ async def test_login_sets_a_signed_httponly_cookie_and_unlocks_the_api(settings,
         cookie = ok.headers["set-cookie"]
         assert cookie.startswith(f"{COOKIE_NAME}=") and "HttpOnly" in cookie and "SameSite=Lax" in cookie and "Max-Age=43200" in cookie
         assert "Secure" not in cookie and "Path=/" in cookie and CODE not in cookie
-        assert (await c.get("/api/auth")).json() == {"required": True, "authenticated": True}
+        assert (await c.get("/api/auth")).json() == {"required": True, "authenticated": True, "request_email": None}
         assert (await c.get("/api/sessions")).status_code == 200
         pdf = await c.get(f"/api/sessions/{sid}/document/file", headers={"range": "bytes=0-9"})
         assert pdf.status_code == 206 and pdf.content.startswith(b"%PDF")                         # pdf.js sends only the cookie
@@ -943,10 +944,11 @@ def test_metric_info_is_still_exported_by_the_evaluation_module():
 
 def test_front_end_knows_the_new_error_codes_and_screens():
     api_js = (STATIC_DIR / "js" / "api.js").read_text(encoding="utf-8")
-    for code in ("auth_required", "invalid_code", "too_many_attempts", "budget_exhausted", "rate_limited", "session_limit"):
+    for code in ("auth_required", "invalid_code", "too_many_attempts", "budget_exhausted", "rate_limited", "session_limit",
+                 "demo_read_only", "invalid_llm_config", "own_key_required", "own_key_disabled"):
         assert f"{code}:" in api_js, code
     login_js = (STATIC_DIR / "js" / "login.js").read_text(encoding="utf-8")
-    assert "Enter access code" in login_js and 'aria: { live: "polite" }' in login_js and '"for": "login-code"' in login_js.replace("for:", '"for":')
+    assert "Access code" in login_js and "View a demo chat" in login_js and "requestCodeHref" in login_js and 'aria: { live: "polite" }' in login_js and '"for": "login-code"' in login_js.replace("for:", '"for":')
     assert (STATIC_DIR / "js" / "usage.js").is_file()
     main_js = (STATIC_DIR / "js" / "main.js").read_text(encoding="utf-8")
     assert "api.auth()" in main_js and "onSignOut" in main_js

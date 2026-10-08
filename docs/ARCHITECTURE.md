@@ -376,3 +376,35 @@ Fixtures: `sample_pdf` (session-scoped), `mock_openai` (function-scoped, started
 * **The web process makes room before an indexing child starts** (`IndexService.set_heavy_job_hook`, wired by `ReportLensService` to `_shed_idle_documents`): every open document nobody is using right now (PDF bytes, outline, folios, squashed text) is closed and the heap trimmed; the next question reopens what it needs. Measured: about 40 MiB off the container's peak while a 308-page report is indexed.
 * `PageIndexClient`'s background litellm preload is disabled, one open PDF (`max_open_docs=1`), lower concurrency (index 6, scoring 3, 6 contexts), `malloc_trim` after parsing and after each scoring.
 Measurements and the reasoning are in docs/DEPLOY.md; `scripts/render_limits_test.py` reproduces them in Docker with Render's limits.
+
+## 12. Public pieces: demo chat, private chats, visitors' own providers, the REST API
+* **Read-only demo chat** (`reportlens/demo.py`, `scripts/export_demo.py`, `demo/`). A real chat exported once (questions, cited
+  answers, scores, the page texts behind them, the PDF and its PageIndex store) is installed at every start-up under the fixed id
+  `DEMO_SESSION_ID`, owner `store.DEMO_OWNER`. `AuthMiddleware` lets GET/HEAD of `/api/demo`, `/api/config`, `/api/openapi.json`
+  and the demo chat's own routes through without the access code; `routes.check_access` refuses every write to it (403
+  `demo_read_only`) and `ReportLensService._require_writable` refuses again. The budget (`Store.usage_snapshot`) and the chat cap
+  (`Store.count_sessions`) ignore it; "ask your own question about this report" clones it (`key_source="none"`: not charged).
+  The PDF is a third-party document: `demo/*` is git-ignored and travels only in the private deploy bundle.
+* **Private chats** (`PRIVATE_CHATS`, on whenever `ACCESS_CODE` is set). Schema v2 adds `sessions.owner`. Every browser gets a
+  signed, year-long `rl_visitor` cookie (key from `SESSION_SECRET`, else the access code: changing the code orphans nobody);
+  `routes.check_access` is the single gate for every `/api/sessions/{sid}...` route (someone else's chat = 404), list/create are
+  scoped to the visitor. API clients are visitors too (their cookie jar).
+* **Model providers** (`reportlens/providers.py`). Every provider is reached through its OpenAI-compatible endpoint, so the web
+  process never loads litellm (~150 MB, it would break the 512 MB fit). OpenAI keeps the Responses lane; others use the chat
+  lane with model ids sent to the SDK as `openai/<id>`, which `pageindex_compat._patch_compat_chat_model` turns into the Agents
+  SDK's `OpenAIChatCompletionsModel` on an explicit client (OpenAI-only body fields such as `prompt_cache_key` are dropped for
+  other hosts), and which `lite_llm.plain_model` sends unchanged (slashes included) from the indexing child. RAGAS gets the bare
+  id; without an embeddings model answer relevancy is reported as unavailable (`evaluation.NO_EMBEDDINGS`) and the run still
+  counts as done. Owner level: `LLM_PROVIDER` + `LLM_API_KEY` + model ids (`config.load_settings` applies the same mapping).
+* **Visitors' own keys** (`X-LLM-Config`, base64url JSON; `routes.request_llm` -> `providers.settings_for_visitor`). The result
+  is a per-request `Settings` copy with `key_source="visitor"` handed to `ask` / `attach_document` / `evaluate_message`
+  (`IndexService.start(settings=...)` -> `_Job.settings`; `QAEngine.with_settings`; `ReportLensService._new_evaluator`, closed
+  after the run). Rules that keep the key contained: never written to `os.environ` (`make_client` skips
+  `configure_openai_env`), child processes of a visitor's job do not inherit the owner's key, keyless endpoints get a placeholder
+  key so nothing falls back to the owner's, key-shaped strings are redacted from logs, the budget skips `key_source != "server"`
+  rows. `VISITOR_KEYS=off|optional|required`; custom base URLs only with `ALLOW_CUSTOM_LLM_URL` (default off in `PUBLIC_MODE`:
+  SSRF). Front end: `llmstore.js` (sessionStorage, or localStorage when "remember"), `llm.js` (the dialog), every request in
+  `api.js` / `sse.js` adds the header.
+* **REST API.** `/docs` serves a vendored Swagger UI (no CDN; `static/docs.html` + `js/docs.js`, no inline script for the CSP),
+  routes carry tags and summaries, `POST /api/sessions/{sid}/ask` returns one JSON answer (it consumes the same `service.ask`
+  generator as the SSE route). Walkthrough: `docs/API.md`.

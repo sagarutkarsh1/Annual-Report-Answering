@@ -83,7 +83,7 @@ class RemoteFault(Exception):
 
 
 _OPENAI_MODEL_ERRORS = frozenset({"notfounderror", "permissiondeniederror"})     # openai.NotFoundError / PermissionDeniedError
-_KEY_RE = re.compile(r"sk-[A-Za-z0-9_\-*.]{4,}")
+_KEY_RE = re.compile(r"(?:sk-|gsk_|xai-|tgp_|AIza)[A-Za-z0-9_\-*.]{4,}")
 _SPACE_RE = re.compile(r"\s+")
 _SDK_PREFIX_RE = re.compile(r"^(Failed to submit document:\s*)+")
 
@@ -132,6 +132,10 @@ def translate_error(exc: BaseException, settings: Settings) -> Fault:
     if any(isinstance(e, OSError) and not isinstance(e, (ConnectionError, TimeoutError)) for e in chain):
         return Fault("storage", "Could not read or write the index files; set REPORTLENS_DATA_DIR to a short path "
                                 "(Windows path-length limit).")
+    if settings.key_source == "visitor" or settings.llm_provider != "openai":
+        fault = _provider_fault(settings, statuses, names, text, class_names)
+        if fault is not None:
+            return fault
     if 429 in statuses and ("insufficient_quota" in text or "exceeded your current quota" in text):
         return Fault("quota", "Your OpenAI account has run out of credit or quota (HTTP 429). Add billing credit at "
                               "platform.openai.com and upload the document again.")
@@ -162,6 +166,32 @@ def translate_error(exc: BaseException, settings: Settings) -> Fault:
     return Fault("other", f"Indexing failed: {_short_reason(exc)}")
 
 
+def _provider_fault(settings: Settings, statuses: set[int], names: str, text: str, class_names: set[str]) -> Optional[Fault]:
+    """The model-side failures, worded for a visitor's own key or a non-OpenAI provider (no ".env" advice for a visitor)."""
+    from .providers import PROVIDERS, bare_model
+
+    provider = PROVIDERS.get(settings.llm_provider)
+    who = provider.label if provider else "The model provider"
+    visitor = settings.key_source == "visitor"
+    where = "under 'Model & API key'" if visitor else "in the server's settings"
+    if 429 in statuses and ("quota" in text or "credit" in text or "billing" in text or "balance" in text):
+        return Fault("quota", f"{who} says the account behind {'your' if visitor else 'this'} API key has run out of credit or quota "
+                              f"(HTTP 429). Add credit with {who}, then upload the document again.")
+    if 429 in statuses or "ratelimit" in names or "rate limit" in text or "rate_limit" in text:
+        return Fault("rate_limit", f"{who} is rate-limiting {'your' if visitor else 'this'} API key (HTTP 429), even after retrying "
+                                   f"with fewer parallel requests. Wait a few minutes and upload again.")
+    if 401 in statuses or "authentication" in names or "invalid_api_key" in text or "incorrect api key" in text or "no api key" in text:
+        return Fault("auth", f"{who} rejected the API key. Check it {where} and upload the document again.")
+    if (statuses & {403, 404} or bool(class_names & _OPENAI_MODEL_ERRORS) or "model_not_found" in text
+            or ("model" in text and ("does not exist" in text or "do not have access" in text or "not found" in text))):
+        return Fault("model", f"{who} could not find the model '{bare_model(settings.index_model)}', or the key has no access to "
+                              f"it. Check the model names {where} and upload the document again.")
+    if (any(s >= 500 for s in statuses) or any(n in names for n in ("connection", "timeout", "internalserver", "unavailable"))
+            or "connection error" in text):
+        return Fault("upstream", f"{who} could not be reached or returned a server error. Try again in a minute.")
+    return None
+
+
 # ============================================================================================ progress / LLM-call shim
 class JobCancelled(Exception):
     """Raised inside the SDK's LLM entry point to abort a cancelled job at its next model call.
@@ -174,10 +204,11 @@ class JobCancelled(Exception):
 class _Job:
     """One queued / running index job and its progress, shared between the worker, the job thread and the LLM shim."""
 
-    def __init__(self, service: "IndexService", session_id: str, pdf_path: Path):
+    def __init__(self, service: "IndexService", session_id: str, pdf_path: Path, settings: Optional[Settings] = None):
         self.service = service
         self.session_id = session_id
         self.pdf_path = pdf_path
+        self.settings: Settings = settings if settings is not None else getattr(service, "_settings", None)   # a visitor's own, or the server's
         self.cancelled = threading.Event()
         self.cancel_reason = "cancelled"          # cancelled | shutdown | timeout
         self.thread: Optional[threading.Thread] = None
@@ -490,9 +521,9 @@ class IndexService:
         """`hook` runs just before an indexing child starts (the web service closes idle documents there); its errors are logged."""
         self._on_heavy_job = hook
 
-    def start(self, session_id: str, pdf_path: Path) -> None:
+    def start(self, session_id: str, pdf_path: Path, settings: Optional[Settings] = None) -> None:
         """Queue the indexing of `pdf_path` for this session and return at once.  Idempotent per session while a job is queued
-        or running."""
+        or running.  `settings`: this job's model provider and key (a visitor's own), default the server's."""
         with self._lock:
             if self._closed:
                 self._update(session_id, status="failed", stage="failed", error=INTERRUPTED_INDEXING_ERROR)
@@ -500,7 +531,7 @@ class IndexService:
             if session_id in self._jobs:
                 log.warning("session %s is already being indexed; ignoring the second start", session_id)
                 return
-            job = _Job(self, session_id, Path(pdf_path))
+            job = _Job(self, session_id, Path(pdf_path), settings)
             self._jobs[session_id] = job
             if self._worker is None:
                 self._worker = threading.Thread(target=self._work, name="reportlens-indexer", daemon=True)
@@ -594,7 +625,7 @@ class IndexService:
             return self._fail(job, error.message)
         if error is not None:
             log.error("indexing of session %s failed", job.session_id, exc_info=error)
-            return self._fail(job, translate_error(error, self._settings).message)
+            return self._fail(job, translate_error(error, job.settings).message)
         self._complete(job, box["outcome"], time.monotonic() - started)
 
     def _finish_discarded(self, job: _Job) -> None:
@@ -647,7 +678,7 @@ class IndexService:
     def _pipeline(self, job: _Job) -> _Outcome:
         """validate -> index (flash, then standard if there is no outline and the fallback is on; one whole-job retry after a
         429 with half the concurrency) -> read the tree back.  Runs on the job thread."""
-        settings = self._settings
+        settings = job.settings
         try:
             info = inspect_pdf(job.pdf_path)
         except PdfError as exc:
@@ -731,6 +762,9 @@ class IndexService:
         from reportlens.config import PROJECT_ROOT, settings_to_json
 
         env = dict(os.environ)
+        if settings.key_source == "visitor":       # the child gets the visitor's key in its settings; the owner's stays out of reach
+            for name in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "LLM_API_KEY", "LLM_BASE_URL"):
+                env.pop(name, None)
         env["PYTHONPATH"] = os.pathsep.join(p for p in (str(PROJECT_ROOT), env.get("PYTHONPATH")) if p)
         env.setdefault("MALLOC_ARENA_MAX", "2")
         env["PYTHONUNBUFFERED"] = "1"

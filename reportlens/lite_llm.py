@@ -46,12 +46,14 @@ _sync_clients: dict[str, Any] = {}
 
 
 def plain_model(model: Optional[str]) -> Optional[str]:
-    """The bare OpenAI model name for `model`, or None when litellm must route it (another provider, no model)."""
+    """The bare OpenAI model name for `model`, or None when litellm must route it (another provider, no model).
+    An explicit ``openai/`` prefix means "OpenAI protocol, the configured base URL, this exact id" (litellm's reading too), so
+    what follows it is sent as is, slashes included: OpenRouter's ``vendor/model`` ids, for example."""
     if not model:
         return None
     name = model[len("litellm/"):] if model.startswith("litellm/") else model
     if name.startswith("openai/"):
-        name = name[len("openai/"):]
+        return name[len("openai/"):] or None
     return None if "/" in name or not name else name
 
 

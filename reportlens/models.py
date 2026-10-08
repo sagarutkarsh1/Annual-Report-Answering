@@ -121,6 +121,7 @@ class Message(BaseModel):
     evaluation: Optional[EvalScores] = None
     error: Optional[str] = None
     created_at: str = ""
+    key_source: str = "server"                # whose key paid: server (counts towards the budget) | visitor | none
 
 
 class DocumentInfo(BaseModel):
@@ -139,6 +140,7 @@ class DocumentInfo(BaseModel):
     created_at: str = ""
     indexed_at: Optional[str] = None
     index_seconds: Optional[float] = None
+    key_source: str = "server"                # whose key paid for the index: server | visitor | none (a copy of the demo)
     # internal: PageIndex doc id ("pi-<32hex>"). Stored in the DB, never serialised to the browser.
     pi_doc_id: Optional[str] = Field(default=None, exclude=True)
 
@@ -159,6 +161,8 @@ class Session(BaseModel):
     updated_at: str
     document: Optional[DocumentInfo] = None
     message_count: int = 0
+    read_only: bool = False                                   # the built-in demo chat: readable by anyone, changeable by no one
+    owner: str = Field(default="", exclude=True)              # visitor id (private chats); never sent to a browser
 
 
 class SessionDetail(Session):

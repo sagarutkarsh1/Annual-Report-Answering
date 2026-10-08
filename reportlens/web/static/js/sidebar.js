@@ -1,5 +1,6 @@
 // Sidebar: brand, New chat, Recents (sessions) with inline rename, delete and "new chat with this document".
 
+import { APP_NAME, creditLine, requestCodeHref } from "./brand.js";
 import { h } from "./dom.js";
 import { icon, logoMark } from "./icons.js";
 import { state, subscribe } from "./state.js";
@@ -23,7 +24,7 @@ export class Sidebar {
    * @param {HTMLElement} root
    * @param {{onSelect: (sid: string) => void, onNewChat: () => void, onRename: (sid: string, title: string) => void,
    *          onDelete: (sid: string) => void, onNewFromDocument: (sid: string) => void, onToggle: () => void,
-   *          onSignOut: () => void}} handlers
+   *          onSignOut: () => void, onSignIn: () => void, onOpenDemo: () => void, onOpenLLM: () => void}} handlers
    */
   constructor(root, handlers) {
     this.root = root;
@@ -34,7 +35,7 @@ export class Sidebar {
     this.menu = null;
     this.build();
     subscribe((_, keys) => {
-      if (keys.some((k) => k === "sessions" || k === "activeId" || k === "config" || k === "auth")) this.render();
+      if (keys.some((k) => ["sessions", "activeId", "config", "auth", "demo", "demoOnly", "llm"].includes(k))) this.render();
     });
     document.addEventListener("click", (e) => {
       if (this.menu && !this.menu.el.contains(e.target) && !e.target.closest(".sess__menu")) this.closeMenu();
@@ -65,9 +66,15 @@ export class Sidebar {
     this.list = h("ul", { class: "recents__list", id: "recents-list" });
     this.empty = h("p", { class: "recents__empty", text: "Your chats will appear here.", hidden: true });
     this.foot = h("div", { class: "sidebar__foot" });
+    this.demoBtn = h(
+      "button",
+      { type: "button", class: "nav-item nav-item--demo", hidden: true, "data-tip": "A real chat, read-only", on: { click: () => this.handlers.onOpenDemo() } },
+      h("span", { class: "nav-item__icon", html: icon("sparkles") }),
+      h("span", { class: "nav-item__label", text: "Demo chat" }),
+    );
     this.root.append(
-      h("div", { class: "sidebar__top" }, h("a", { class: "brand", href: "#/", "aria-label": "ReportLens home", html: `${logoMark(28)}<span class="brand__word">Report<span>Lens</span></span>` }), this.toggleBtn),
-      h("nav", { class: "sidebar__nav", "aria-label": "Chats" }, this.newChatBtn),
+      h("div", { class: "sidebar__top" }, h("a", { class: "brand", href: "#/", "aria-label": `${APP_NAME} home`, html: `${logoMark(28)}<span class="brand__word">Annual Report <span>Lens</span></span>` }), this.toggleBtn),
+      h("nav", { class: "sidebar__nav", "aria-label": "Chats" }, this.newChatBtn, this.demoBtn),
       h("div", { class: "recents" }, this.recentsBtn, this.list, this.empty),
       this.foot,
     );
@@ -102,6 +109,15 @@ export class Sidebar {
       }
     }
     this.empty.hidden = sessions.length > 0;
+    this.empty.textContent = state.demoOnly ? "Sign in with an access code to start chats of your own." : "Your chats will appear here.";
+    const demo = state.demo;
+    this.demoBtn.hidden = !demo?.available;
+    const onDemo = !!demo?.available && state.activeId === demo.session_id;
+    this.demoBtn.classList.toggle("is-active", onDemo);
+    if (onDemo) this.demoBtn.setAttribute("aria-current", "page");
+    else this.demoBtn.removeAttribute("aria-current");
+    this.newChatBtn.querySelector(".nav-item__label").textContent = state.demoOnly ? "Sign in to chat" : "New chat";
+    this.newChatBtn.querySelector(".nav-item__icon").innerHTML = icon(state.demoOnly ? "log-in" : "message-circle");
     this.renderFoot();
   }
 
@@ -109,14 +125,27 @@ export class Sidebar {
     const cfg = state.config;
     this.foot.replaceChildren();
     if (!cfg) return;
-    if (state.auth?.required) {
-      this.foot.append(
-        h("button", { type: "button", class: "nav-item sidebar__signout", on: { click: () => this.handlers.onSignOut() } },
-          h("span", { class: "nav-item__icon", html: icon("log-out") }), h("span", { class: "nav-item__label", text: "Sign out" })),
-      );
+    const navButton = (iconName, label, onClick, cls = "") =>
+      h("button", { type: "button", class: `nav-item ${cls}`, on: { click: onClick } }, h("span", { class: "nav-item__icon", html: icon(iconName) }), h("span", { class: "nav-item__label", text: label }));
+    if (state.demoOnly) {
+      this.foot.append(navButton("log-in", "Sign in", () => this.handlers.onSignIn(), "sidebar__signin"));
+      if (state.auth?.requestEmail) {
+        this.foot.append(h("a", { class: "nav-item sidebar__request", href: requestCodeHref(state.auth.requestEmail) },
+          h("span", { class: "nav-item__icon", html: icon("mail") }), h("span", { class: "nav-item__label", text: "Request an access code" })));
+      }
+    } else if (state.auth?.required) {
+      this.foot.append(navButton("log-out", "Sign out", () => this.handlers.onSignOut(), "sidebar__signout"));
+    }
+    const own = state.llm;
+    if (!state.demoOnly && cfg.llm && cfg.llm.visitor_keys !== "off") {
+      const btn = navButton("key-round", "Model & API key", () => this.handlers.onOpenLLM(), "sidebar__llm");
+      btn.append(h("span", { class: "sidebar__llm-state", text: own ? `${own.label} · your key` : cfg.llm.visitor_keys === "required" ? "add your key" : "server's model" }));
+      this.foot.append(btn);
     }
     if (cfg.demo_mock) this.foot.append(h("div", { class: "badge badge--demo", text: "Demo mode · mock model" }));
-    this.foot.append(h("div", { class: "sidebar__models", text: `Answers: ${cfg.chat_model}`, title: `Answer model ${cfg.chat_model}\nIndex model ${cfg.index_model}\nJudge ${cfg.judge_model}` }));
+    const model = own?.model || cfg.chat_model;
+    this.foot.append(h("div", { class: "sidebar__models", text: `Answers: ${model}`, title: own ? `Your ${own.label} model ${model}` : `Answer model ${cfg.chat_model}\nIndex model ${cfg.index_model}\nJudge ${cfg.judge_model}` }));
+    this.foot.append(creditLine("sidebar__credit"));
   }
 
   createRow(session) {

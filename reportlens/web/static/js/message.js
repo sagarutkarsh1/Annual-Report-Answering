@@ -171,7 +171,7 @@ export class AssistantMessageView {
     }
     this.evalEl.hidden = false;
     if (!this.evalBlock) {
-      this.evalBlock = new EvalBlock({ metrics: this.env.metrics, onRerun: () => this.env.onRerunEval(msg) });
+      this.evalBlock = new EvalBlock({ metrics: this.env.metrics, onRerun: this.env.readOnly?.() ? null : () => this.env.onRerunEval(msg) });
       this.evalEl.append(this.evalBlock.el);
     }
     this.evalBlock.update({ evaluation: msg.evaluation, running: ui.eval.running, startedAt: ui.eval.startedAt, nContexts: ui.eval.nContexts });

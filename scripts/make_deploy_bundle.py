@@ -24,9 +24,9 @@ REPO = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = Path(r"C:\rl_deploy_bundle")
 TARGETS = ("render", "hf")
 
-FILES = ("Dockerfile", ".dockerignore", "requirements-deploy.txt")
+FILES = ("Dockerfile", ".dockerignore", "requirements-deploy.txt", "LICENSE", "THIRD_PARTY_NOTICES.md", "SECURITY.md")
 RENDER_FILES = ("render.yaml",)
-TREES = ("reportlens", "devtools", "samples")
+TREES = ("reportlens", "devtools", "samples", "demo")        # demo/: the read-only demo chat (third-party PDF: private bundle only)
 MANAGED_COMMON = (*FILES, "README.md", *TREES)
 MANAGED = {"render": (*MANAGED_COMMON, *RENDER_FILES, ".gitignore"), "hf": MANAGED_COMMON}
 KEEP = {".git"}                                             # allowed in the output folder, never touched
@@ -42,27 +42,37 @@ SECRET_PATTERNS = {
     "Hugging Face token": re.compile(rb"\bhf_[A-Za-z0-9]{30,}"),
     "GitHub token": re.compile(rb"\b(?:ghp|gho|ghs|ghu|github_pat)_[A-Za-z0-9_]{30,}"),
     "Render API key": re.compile(rb"\brnd_[A-Za-z0-9]{20,}"),
-    "key assignment": re.compile(rb"\b(?:OPENAI_API_KEY|ACCESS_CODE|SESSION_SECRET|HF_TOKEN)\s*=\s*[\"']?(?!sk-demo-mock|sk-not-needed)[A-Za-z0-9_\-]{12,}"),
+    "Google API key": re.compile(rb"\bAIza[0-9A-Za-z_\-]{30,}"),
+    "Groq / xAI key": re.compile(rb"\b(?:gsk|xai)[_-][A-Za-z0-9]{30,}"),
+    "key assignment": re.compile(rb"\b(?:OPENAI_API_KEY|LLM_API_KEY|ACCESS_CODE|SESSION_SECRET|HF_TOKEN)\s*=\s*[\"']?(?!sk-demo-mock|sk-not-needed)[A-Za-z0-9_\-]{12,}"),
     "AWS key id": re.compile(rb"\bAKIA[0-9A-Z]{16}\b"),
     "private key block": re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
 }
 ALLOWED_PLACEHOLDERS = (b"sk-demo-mock-not-a-real-key", b"sk-not-needed")
 RENDER_SECRET_KEYS = ("OPENAI_API_KEY", "ACCESS_CODE")      # must be `sync: false` in render.yaml (typed in the dashboard)
 
-SHORT_DESCRIPTION = "Cited, highlighted answers from annual-report PDFs"
+SHORT_DESCRIPTION = "Chat with annual reports: cited answers, live scores"
 assert len(SHORT_DESCRIPTION) <= 60
 
-README_BODY = """# ReportLens
+README_BODY = """# Annual Report Lens
+
+*Chat with your annual report, with live answer evaluation.*
 
 Ask questions about **one annual-report PDF** and get answers with page-level citations. Click a citation and the PDF opens
-beside the chat, scrolled to the page, with the supporting passage highlighted. Every answer is then scored by an AI judge
-(faithfulness, answer relevancy, context precision).
+beside the chat, scrolled to the page, with the supporting passage highlighted. Every answer is then scored live by an AI
+judge with RAGAS (faithfulness, answer relevancy, context precision).
 
 Retrieval is [PageIndex](https://github.com/VectifyAI/PageIndex) (a table-of-contents tree that a language model navigates,
-no vector database); the models are OpenAI's.
+no vector database). The server's model is OpenAI's; visitors may bring their own key for OpenAI, Anthropic, Google Gemini,
+OpenRouter, Groq, Mistral, DeepSeek, xAI or Together AI.
+
+By [sagarutkarsh1](https://github.com/sagarutkarsh1) · MIT licence (see LICENSE and THIRD_PARTY_NOTICES.md) · built with
+[Claude Code](https://claude.com/claude-code). This repository is the deployment bundle; the source code, tests and docs live
+in the main repository.
 
 ## How to use
 
+0. No code yet? Open the link and choose **View a demo chat**: a real conversation with a published annual report, read-only.
 1. Open the link you were given and enter the access code.
 2. Start a chat and upload a text-based annual-report PDF (searchable text, not a scan; keep it within the size limit shown on the upload card).
 3. Wait for indexing to finish ({INDEXING_TIME}), then ask a question.
@@ -72,7 +82,7 @@ The first request after a quiet period can take a minute while the service wakes
 
 ## Please read before you upload anything
 
-- **Your PDF text and your questions are sent to OpenAI** to build the index, write the answers and score them. OpenAI keeps API requests for a limited time under its own policy.
+- **Your PDF text and your questions are sent to the model provider** (the server's OpenAI account, or the provider of your own key) to build the index, write the answers and score them. Providers keep API requests for a limited time under their own policies.
 - **Storage is temporary.** Uploaded files and chats live on the server's temporary disk and are deleted whenever the service restarts or goes to sleep.
 - **Do not upload confidential, personal or otherwise sensitive documents.** Use public reports.
 - This is a demo with a spending cap. When the cap is reached, uploads and questions pause until the owner resets it.
@@ -80,7 +90,7 @@ The first request after a quiet period can take a minute while the service wakes
 """
 
 SPACE_README = f"""---
-title: ReportLens
+title: Annual Report Lens
 emoji: 🔎
 colorFrom: blue
 colorTo: indigo
@@ -172,7 +182,8 @@ def audit(out: Path, target: str = "render") -> list[str]:
             continue
         rel = path.relative_to(out).as_posix()
         parts = set(path.relative_to(out).parts)
-        if parts & FORBIDDEN_NAMES:
+        in_demo_store = rel.startswith("demo/files/pageindex/")      # PageIndex's own store layout has a docs/ folder
+        if parts & FORBIDDEN_NAMES and not (in_demo_store and parts & FORBIDDEN_NAMES == {"docs"}):
             problems.append(f"forbidden item: {rel}")
         if any(path.match(glob) for glob in FORBIDDEN_GLOBS):
             problems.append(f"forbidden file type: {rel}")
@@ -184,7 +195,7 @@ def audit(out: Path, target: str = "render") -> list[str]:
                         continue
                     problems.append(f"{label} found in {rel} (offset {match.start()})")      # never print the match itself
     readme = out / "README.md"
-    if target == "hf" and readme.exists() and not readme.read_text(encoding="utf-8").startswith("---\ntitle: ReportLens\n"):
+    if target == "hf" and readme.exists() and not readme.read_text(encoding="utf-8").startswith("---\ntitle: Annual Report Lens\n"):
         problems.append("README.md lost its Hugging Face front matter")
     if target == "render":
         if readme.exists() and readme.read_text(encoding="utf-8").startswith("---"):
@@ -206,7 +217,7 @@ def next_steps(out: Path, target: str) -> list[str]:
             f'  1. cd "{out}"',
             "  2. git init -b main        (only the first time)",
             "  3. git remote add space https://huggingface.co/spaces/<your-user>/<your-space>",
-            "  4. git add -A ; git commit -m \"Deploy ReportLens\"",
+            "  4. git add -A ; git commit -m \"Deploy Annual Report Lens\"",
             "  5. git push space main     (Git asks for your user name and, as the password, a Hugging Face WRITE token you create yourself)",
             "Set the secrets and variables on the Space's Settings page BEFORE or right after the first push; never put them in a file.",
         ]
@@ -215,7 +226,7 @@ def next_steps(out: Path, target: str) -> list[str]:
         "  1. On github.com create a PRIVATE repository (for example 'reportlens-deploy'), empty: no README, no .gitignore.",
         f'  2. cd "{out}"',
         "  3. git init -b main        (only the first time)",
-        "  4. git add -A ; git commit -m \"Deploy ReportLens\"",
+        "  4. git add -A ; git commit -m \"Deploy Annual Report Lens\"",
         "  5. git remote add origin https://github.com/<your-user>/reportlens-deploy.git",
         "  6. git push -u origin main (Git opens a sign-in window or asks for your GitHub user name and a personal access token: you type them, nobody else)",
         "  7. dashboard.render.com -> New -> Blueprint -> connect that repository -> Render reads render.yaml.",
