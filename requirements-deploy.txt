@@ -1,0 +1,24 @@
+# Linux-friendly dependency list for the container (Hugging Face Spaces, Render, any Docker host).
+#
+# Mirrors [project].dependencies in pyproject.toml with the same pins. It is NOT requirements.lock.txt: that file is a
+# Windows `pip freeze` (it contains pywin32 and other platform-specific wheels). Nothing else in the product is Windows-only
+# (the `mcp` package pulls pywin32 only on win32, through an environment marker).
+#
+#   pip install --no-cache-dir -r requirements-deploy.txt
+pageindex==0.2.21
+pycryptodome                    # PageIndex needs it for AES-encrypted PDFs
+ragas==0.4.3
+langchain-community==0.4.1      # ragas 0.4.3 only imports with this exact version
+instructor>=1.15
+openai>=2
+fastapi>=0.115
+uvicorn[standard]
+python-multipart
+pypdfium2
+rapidfuzz
+pydantic>=2
+python-dotenv
+
+# Supply chain: pageindex pulls in litellm. Releases 1.82.7 and 1.82.8 were malicious; never install them, and stay on a
+# release that PageIndex 0.2.21 supports (>= 1.97).
+litellm>=1.97,!=1.82.7,!=1.82.8

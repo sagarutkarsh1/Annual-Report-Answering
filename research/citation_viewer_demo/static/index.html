@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Citation panel demo</title>
+<link rel="stylesheet" href="panel.css">
+</head>
+<body>
+<div class="app">
+  <main class="chat" id="chat">
+    <h1>Citation to source - prototype</h1>
+    <p class="hint">Click a citation chip. The panel opens, scrolls to the passage and pulses a highlight for ~4 s. Keys in the panel: <kbd>[</kbd> <kbd>]</kbd> pages, <kbd>+</kbd> <kbd>-</kbd> <kbd>0</kbd> zoom, <kbd>g</kbd> go to page, <kbd>Esc</kbd> close.</p>
+    <div id="cards"></div>
+    <pre id="log" class="card meta" style="white-space:pre-wrap"></pre>
+  </main>
+  <aside id="panel" class="cp" hidden></aside>
+</div>
+<script type="module">
+import { CitationPanel } from "./citation_panel.js?v=5";
+const PDFJS_VERSION = "6.4.299";
+const CDN = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}`;
+const log = (...a) => { const el = document.getElementById("log"); el.textContent += a.join(" ") + "\n"; console.log(...a); };
+
+const pdfjsLib = await import(`${CDN}/build/pdf.min.mjs`);
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${CDN}/build/pdf.worker.min.mjs`;
+log("pdf.js", pdfjsLib.version);
+
+const info = await (await fetch("/api/doc")).json();
+const panel = new CitationPanel(document.getElementById("panel"), { pdfjsLib });
+window.__panel = panel; window.__pdfjs = pdfjsLib;
+const pdfUrl = new URLSearchParams(location.search).has("nocache") ? `${info.url}?n=${Date.now()}` : info.url;   // ?nocache -> defeat HTTP cache to watch Range traffic
+await panel.load({ url: pdfUrl, name: info.name, pages: info.pages,
+  pdfOptions: { ...(new URLSearchParams(location.search).has("nostream") ? { disableStream: true } : {}), cMapUrl: `${CDN}/cmaps/`, standardFontDataUrl: `${CDN}/standard_fonts/`, wasmUrl: `${CDN}/wasm/`, iccUrl: `${CDN}/iccs/` } });
+panel.close();
+log("loaded", info.name, info.page_count, "pages");
+
+const CASES = [
+  { label: "p.1 plain paragraph (D)", page: 1, quote: "Cash generated from continuing operations was \u00a36,991 million in 2024/25, down 4% from \u00a37,281 million, primarily due to the timing of working capital movements" },
+  { label: "p.1 hyphenated + curly quotes (A)", page: 1, quote: 'driven by the infrastructure programme in the UK and the "Climate Leadership" Act in New York. Our network reliability was 99.99%' },
+  { label: "p.1 crosses columns (F)", page: 1, quote: "The Board has recommended a final dividend of 31.36 pence per share, which, subject to shareholder approval at the AGM, will be paid on 12 September 2025" },
+  { label: "p.2 table row", page: 2, quote: "Net interest paid (1,588) (1,479) (7%)" },
+  { label: "p.4 stream-order trap", page: 4, quote: "the Board concluded that the Group's capital allocation framework remained appropriate for the delivery of our five-year plan" },
+  { label: "p.5 landscape /Rotate", page: 5, quote: "supported by strong performance in the UK Electricity Transmission segment and favourable foreign exchange movements" },
+  { label: "p.3 (rotated+crop file)", page: 3, quote: "The quick brown fox jumps over the lazy dog 12345." },
+  { label: "fuzzy: 2 words changed", page: 1, quote: "Cash generated from continuing activities was \u00a36,991 million in 2024/25, down 4% from \u00a37,281 million, mainly due to the timing of working capital" },
+  { label: "wrong page hint (says p.2, is p.1)", page: 2, quote: "Underlying operating profit \u2014 adjusted for timing \u2014 increased by 6% to \u00a36,689 million" },
+  { label: "unmatchable (page-only fallback)", page: 1, quote: "The company said that money coming from its day to day activities fell slightly compared with the prior year" },
+];
+const cards = document.getElementById("cards");
+for (const c of CASES) {
+  const d = document.createElement("div"); d.className = "card";
+  d.innerHTML = `<div>${c.label.replace(/</g, "&lt;")} <button class="cite" data-i="${CASES.indexOf(c)}">${info.name} p.${c.page}</button></div><div class="q">\u201c${c.quote.replace(/</g, "&lt;")}\u201d</div><div class="meta"></div>`;
+  cards.appendChild(d);
+}
+cards.addEventListener("click", async (e) => {
+  const b = e.target.closest(".cite"); if (!b) return;
+  const c = CASES[+b.dataset.i], meta = b.closest(".card").querySelector(".meta");
+  const t0 = performance.now();
+  const r = await (await fetch(`/api/locate?page=${c.page}&quote=${encodeURIComponent(c.quote)}`)).json();
+  meta.textContent = `locate: ${Math.round(performance.now() - t0)} ms round-trip, server ${r.elapsed_ms} ms | page ${r.page} (hint ${r.hinted_page}) method=${r.method} score=${r.score} order=${r.order} rects=${r.rects.length} ${r.notes.join("; ")}`;
+  panel.goToCitation({ page: r.page, rects: r.rects, method: r.method, score: r.score });
+});
+window.__ready = true;
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+[
+  {
+    "id": "customers_connected",
+    "kind": "text",
+    "question": "How many customers does Northbridge connect?",
+    "answer": "8.4 million customers, an increase of 96,000 on the previous year.",
+    "key": "8.4 million",
+    "page": 4,
+    "printed_page": "2",
+    "related_pages": [],
+    "quote": "We now connect 8.4 million customers across our regional networks, an increase of 96,000 on the previous year.",
+    "section_path": [
+      "Strategic report",
+      "Highlights"
+    ]
+  },
+  {
+    "id": "ltifr",
+    "kind": "text",
+    "question": "What was the lost-time injury frequency rate in 2025/26?",
+    "answer": "0.12 per 100,000 hours worked (0.17 in the previous year).",
+    "key": "0.12",
+    "page": 13,
+    "printed_page": "11",
+    "related_pages": [],
+    "quote": "Our lost-time injury frequency rate improved to 0.12 per 100,000 hours worked, from 0.17 last year.",
+    "section_path": [
+      "Strategic report",
+      "Key performance indicators"
+    ]
+  },
+  {
+    "id": "revenue",
+    "kind": "text",
+    "question": "What was Northbridge’s group revenue in 2025/26?",
+    "answer": "£14,812 million, up 7.4% on £13,791 million.",
+    "key": "14,812",
+    "page": 15,
+    "printed_page": "13",
+    "related_pages": [],
+    "quote": "Group revenue increased by 7.4% to £14,812 million (2024/25: £13,791 million)",
+    "section_path": [
+      "Strategic report",
+      "Financial review"
+    ]
+  },
+  {
+    "id": "tax_rate",
+    "kind": "text",
+    "question": "What was the Group’s effective tax rate for 2025/26?",
+    "answer": "20.0%, the same as the prior year.",
+    "key": "20.0%",
+    "page": 15,
+    "printed_page": "13",
+    "related_pages": [],
+    "quote": "The effective tax rate for the year was 20.0%",
+    "section_path": [
+      "Strategic report",
+      "Financial review"
+    ]
+  },
+  {
+    "id": "uop",
+    "kind": "table",
+    "question": "What was underlying operating profit in 2025/26?",
+    "answer": "£3,127 million, up 9.2% from £2,864 million.",
+    "key": "3,127",
+    "page": 15,
+    "printed_page": "13",
+    "related_pages": [],
+    "quote": "Underlying operating profit 3,127 2,864 9.2%",
+    "section_path": [
+      "Strategic report",
+      "Financial review"
+    ]
+  },
+  {
+    "id": "capex",
+    "kind": "table",
+    "question": "What was capital expenditure in the summary cash flow statement for 2025/26?",
+    "answer": "£2,596 million outflow, shown as (2,596).",
+    "key": "2,596",
+    "page": 17,
+    "printed_page": "15",
+    "related_pages": [],
+    "quote": "Capital expenditure (2,596) (2,288)",
+    "section_path": [
+      "Strategic report",
+      "Financial review",
+      "Summary cash flow statement"
+    ]
+  },
+  {
+    "id": "cgo",
+    "kind": "table",
+    "question": "What was cash generated from operations in 2025/26?",
+    "answer": "£6,991 million.",
+    "key": "6,991",
+    "page": 17,
+    "printed_page": "15",
+    "related_pages": [],
+    "quote": "Cash generated from operations 6,991 6,534",
+    "section_path": [
+      "Strategic report",
+      "Financial review",
+      "Summary cash flow statement"
+    ]
+  },
+  {
+    "id": "disposals",
+    "kind": "table",
+    "question": "How much did Northbridge receive from disposals in 2025/26?",
+    "answer": "£1,263 million.",
+    "key": "1,263",
+    "page": 17,
+    "printed_page": "15",
+    "related_pages": [],
+    "quote": "Proceeds from disposals 1,263 412",
+    "section_path": [
+      "Strategic report",
+      "Financial review",
+      "Summary cash flow statement"
+    ]
+  },
+  {
+    "id": "net_debt",
+    "kind": "text",
+    "question": "What was net debt at 31 March 2026?",
+    "answer": "£21,466 million, down £1,252 million from £22,718 million.",
+    "key": "21,466",
+    "page": 18,
+    "printed_page": "16",
+    "related_pages": [],
+    "quote": "Net debt at 31 March 2026 was £21,466 million, a reduction of £1,252 million from £22,718 million a year earlier.",
+    "section_path": [
+      "Strategic report",
+      "Financial review",
+      "Net debt and funding"
+    ]
+  },
+  {
+    "id": "note29_xref",
+    "kind": "cross_reference",
+    "question": "Where are the Group’s financial commitments and contingent liabilities described?",
+    "answer": "In note 29, on printed page 53 (physical page 55).",
+    "key": "note 29",
+    "page": 18,
+    "printed_page": "16",
+    "related_pages": [
+      55
+    ],
+    "quote": "Details of our financial commitments and contingent liabilities are set out in note 29 on page 53",
+    "section_path": [
+      "Strategic report",
+      "Financial review",
+      "Net debt and funding"
+    ]
+  },
+  {
+    "id": "dividend",
+    "kind": "text",
+    "question": "What is the total dividend per share for 2025/26?",
+    "answer": "36.15 pence per share (11.53 pence interim plus 24.62 pence final).",
+    "key": "36.15",
+    "page": 20,
+    "printed_page": "18",
+    "related_pages": [],
+    "quote": "makes a total dividend for the year of 36.15 pence per share",
+    "section_path": [
+      "Strategic report",
+      "Financial review",
+      "Dividend and capital allocation"
+    ]
+  },
+  {
+    "id": "cyber_risk",
+    "kind": "text",
+    "question": "Which principal risk was assessed as having increased during the year?",
+    "answer": "The risk of a significant cyber attack on operational technology.",
+    "key": "cyber attack",
+    "page": 22,
+    "printed_page": "20",
+    "related_pages": [],
+    "quote": "The risk of a significant cyber attack on our operational technology was assessed as having increased during the year",
+    "section_path": [
+      "Strategic report",
+      "Principal risks and uncertainties",
+      "Principal risks"
+    ]
+  },
+  {
+    "id": "viability",
+    "kind": "text",
+    "question": "Over what period did the directors assess the Group’s viability?",
+    "answer": "Five years, to 31 March 2031.",
+    "key": "31 March 2031",
+    "page": 24,
+    "printed_page": "22",
+    "related_pages": [],
+    "quote": "The directors assessed the viability of the Group over a period of five years to 31 March 2031",
+    "section_path": [
+      "Strategic report",
+      "Principal risks and uncertainties",
+      "Viability statement"
+    ]
+  },
+  {
+    "id": "emissions_target",
+    "kind": "text",
+    "question": "By how much does Northbridge plan to reduce its Scope 1 and 2 emissions by 2030?",
+    "answer": "A 62% reduction in Scope 1 and 2 emissions by 2030 against a 2019/20 baseline (the “Clean Network 2030” commitment).",
+    "key": "62%",
+    "page": 25,
+    "printed_page": "23",
+    "related_pages": [],
+    "quote": "reducing our Scope 1 and 2 emissions by 62% by 2030 against a 2019/20 baseline",
+    "section_path": [
+      "Strategic report",
+      "Sustainability"
+    ]
+  },
+  {
+    "id": "ceo",
+    "kind": "text",
+    "question": "Who is Northbridge’s Chief Executive Officer?",
+    "answer": "Raj Patel, who joined the Board in 2019 and became Chief Executive in 2022.",
+    "key": "Raj Patel",
+    "page": 28,
+    "printed_page": "26",
+    "related_pages": [],
+    "quote": "Raj Patel, Chief Executive Officer, joined the Board in 2019 and was appointed Chief Executive in 2022",
+    "section_path": [
+      "Governance",
+      "Board of directors"
+    ]
+  },
+  {
+    "id": "audit_fees",
+    "kind": "text",
+    "question": "What were the total fees paid to the external auditor?",
+    "answer": "£4.3 million, of which £3.1 million was for audit-related services.",
+    "key": "£4.3 million",
+    "page": 32,
+    "printed_page": "30",
+    "related_pages": [],
+    "quote": "Total fees paid to the external auditor were £4.3 million, of which audit-related fees were £3.1 million",
+    "section_path": [
+      "Governance",
+      "Audit committee report"
+    ]
+  },
+  {
+    "id": "ceo_pay",
+    "kind": "table",
+    "question": "What was the Chief Executive’s single total figure of remuneration for 2025/26?",
+    "answer": "£3,214,000 (£3,214 thousand).",
+    "key": "3,214",
+    "page": 34,
+    "printed_page": "32",
+    "related_pages": [],
+    "quote": "Raj Patel, Chief Executive Officer 3,214 2,968",
+    "section_path": [
+      "Governance",
+      "Directors’ remuneration report"
+    ]
+  },
+  {
+    "id": "audit_opinion",
+    "kind": "text",
+    "question": "What is the external auditor’s opinion on the Group financial statements?",
+    "answer": "They give a true and fair view of the Group’s affairs as at 31 March 2026.",
+    "key": "true and fair view",
+    "page": 38,
+    "printed_page": "36",
+    "related_pages": [],
+    "quote": "In our opinion, the Group financial statements give a true and fair view of the state of the Group’s affairs as at 31 March 2026",
+    "section_path": [
+      "Financial statements",
+      "Independent auditor’s report"
+    ]
+  },
+  {
+    "id": "profit_year",
+    "kind": "table",
+    "question": "What was the Group’s profit for the year 2025/26?",
+    "answer": "£1,432 million.",
+    "key": "1,432",
+    "page": 41,
+    "printed_page": "39",
+    "related_pages": [],
+    "quote": "Profit for the year 1,432 1,323",
+    "section_path": [
+      "Financial statements",
+      "Consolidated income statement"
+    ]
+  },
+  {
+    "id": "total_equity",
+    "kind": "table",
+    "question": "What was total equity at 31 March 2026?",
+    "answer": "£15,958 million.",
+    "key": "15,958",
+    "page": 42,
+    "printed_page": "40",
+    "related_pages": [],
+    "quote": "Total equity 15,958 13,354",
+    "section_path": [
+      "Financial statements",
+      "Consolidated balance sheet"
+    ]
+  },
+  {
+    "id": "commitments",
+    "kind": "text",
+    "question": "How much capital expenditure was contracted for but not provided for at 31 March 2026?",
+    "answer": "£1,946 million (2025: £1,708 million).",
+    "key": "1,946",
+    "page": 55,
+    "printed_page": "53",
+    "related_pages": [],
+    "quote": "Capital expenditure contracted for but not provided for at 31 March 2026 was £1,946 million (2025: £1,708 million)",
+    "section_path": [
+      "Financial statements",
+      "Notes to the financial statements",
+      "Note 29 Financial commitments and contingencies"
+    ]
+  },
+  {
+    "id": "five_year_revenue",
+    "kind": "table",
+    "question": "What was group revenue in 2023/24 according to the five-year summary?",
+    "answer": "£12,964 million.",
+    "key": "12,964",
+    "page": 58,
+    "printed_page": "56",
+    "related_pages": [],
+    "quote": "Revenue 14,812 13,791 12,964 12,437 11,102",
+    "section_path": [
+      "Other information",
+      "Five-year summary"
+    ]
+  }
+]

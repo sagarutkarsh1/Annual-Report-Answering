@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>PDFViewer probe</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/web/pdf_viewer.css">
+<style>html,body{height:100%;margin:0} #vc{position:absolute;inset:0 0 0 0;overflow:auto;background:#888}</style></head>
+<body><div id="vc"><div id="viewer" class="pdfViewer"></div></div>
+<script type="module">
+const V = "6.4.299", CDN = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${V}`;
+const pdfjsLib = await import(`${CDN}/build/pdf.min.mjs`);          // must run first: pdf_viewer.mjs reads globalThis.pdfjsLib
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${CDN}/build/pdf.worker.min.mjs`;
+const viewerLib = await import(`${CDN}/web/pdf_viewer.mjs`);
+const eventBus = new viewerLib.EventBus();
+const linkService = new viewerLib.PDFLinkService({ eventBus });
+const findController = new viewerLib.PDFFindController({ eventBus, linkService });
+const container = document.getElementById("vc");
+const viewer = new viewerLib.PDFViewer({ container, eventBus, linkService, findController });
+linkService.setViewer(viewer);
+const url = new URLSearchParams(location.search).get("pdf") || "/api/pdf";
+const pdf = await pdfjsLib.getDocument({ url, disableAutoFetch: true, disableStream: true }).promise;
+viewer.setDocument(pdf); linkService.setDocument(pdf, null);
+await new Promise((r) => eventBus.on("pagesinit", r));
+viewer.currentScaleValue = "page-width";
+window.__probe = { eventBus, findController, viewer, viewerLib, pdfjsLib, pdf };
+window.runFind = (query, extra = {}) => new Promise((resolve) => {
+  const t0 = performance.now(); let last = null;
+  const onCount = (e) => { last = e.matchesCount; };
+  const onState = (e) => { if (e.state !== viewerLib.FindState.PENDING) { setTimeout(() => { resolve({ state: e.state, count: last, ms: Math.round(performance.now() - t0), page: viewer.currentPageNumber }); eventBus.off("updatefindmatchescount", onCount); eventBus.off("updatefindcontrolstate", onState); }, 50); } };
+  eventBus.on("updatefindmatchescount", onCount); eventBus.on("updatefindcontrolstate", onState);
+  eventBus.dispatch("find", { source: window, type: "", query, caseSensitive: false, entireWord: false, highlightAll: true, findPrevious: false, matchDiacritics: false, ...extra });
+});
+// --- Option 2 probe: citation overlay on top of the stock PDFViewer -------------------------------------------
+window.showRects = (page, rects, { topOffsetFrac = 0.3 } = {}) => {
+  const pv = viewer.getPageView(page - 1);              // PDFPageView
+  let layer = pv.div.querySelector(".cite-hl-layer");
+  if (!layer) { layer = document.createElement("div"); layer.className = "cite-hl-layer"; layer.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:5"; pv.div.appendChild(layer); }
+  layer.replaceChildren();
+  for (const r of rects) { const d = document.createElement("div"); d.className = "hl"; d.style.cssText = `position:absolute;left:${r.x * 100}%;top:${r.y * 100}%;width:${r.w * 100}%;height:${r.h * 100}%;background:rgb(255 208 0 / .45);mix-blend-mode:multiply`; layer.appendChild(d); }
+  // XYZ destination = PDF user space (origin bottom-left): convert from the normalised top-left rect
+  const [vx0, vy0, vx1, vy1] = pv.viewport.viewBox, H = vy1 - vy0, minY = Math.min(...rects.map((r) => r.y));
+  const cssPerPt = pv.viewport.scale * (pv.viewport.userUnit || 1);
+  const topPdf = vy1 - minY * H + (topOffsetFrac * container.clientHeight) / cssPerPt;
+  viewer.scrollPageIntoView({ pageNumber: page, destArray: [null, { name: "XYZ" }, null, topPdf, null] });
+  return { vb: pv.viewport.viewBox, topPdf, rotation: pv.viewport.rotation };
+};
+eventBus.on("pagerendered", (e) => { window.__lastRendered = e.pageNumber; });
+window.__ready = true;
+</script></body></html>

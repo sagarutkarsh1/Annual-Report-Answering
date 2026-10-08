@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+data/
+*.egg-info/
+.pageindex/
+node_modules/
+.DS_Store
+# research/ is kept (reference notes); its throwaway stores are not
+research/**/store*/
+research/**/mock_log*.jsonl

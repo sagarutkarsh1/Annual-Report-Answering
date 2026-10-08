@@ -1,0 +1,24 @@
+# Only reportlens/, devtools/, samples/ and requirements-deploy.txt are ever COPYed (see Dockerfile); this keeps the build
+# context small and makes sure secrets and local state can never reach the image.
+.venv/
+venv/
+research/
+data/
+tests/
+docs/
+scripts/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.pytest_cache/
+.pageindex/
+node_modules/
+*.lock
+*.lock.txt
+.git/
+.gitignore
+.claude/
+*.egg-info/
+.DS_Store

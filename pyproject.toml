@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reportlens"
+version = "0.1.0"
+description = "Annual-report Q&A with PageIndex retrieval, page-level citations and RAGAS evaluation"
+requires-python = ">=3.10"
+dependencies = [
+  # PageIndex SDK (local "Flash" mode). Pinned: the SDK releases roughly weekly and its API moves.
+  "pageindex==0.2.21",
+  "pycryptodome",                # PageIndex needs it for AES-encrypted PDFs (GitHub #426)
+  # RAGAS 0.4.3 only imports with langchain-community 0.4.1 (0.4.2 removed chat_models.vertexai)
+  "ragas==0.4.3",
+  "langchain-community==0.4.1",
+  "instructor>=1.15",
+  "openai>=2",
+  # web
+  "fastapi>=0.115",
+  "uvicorn[standard]",
+  "python-multipart",
+  # pdf + citation location (permissively licensed; PyMuPDF is AGPL and deliberately NOT used)
+  "pypdfium2",
+  "rapidfuzz",
+  "pydantic>=2",
+  "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "httpx", "reportlab"]
+
+[tool.setuptools.packages.find]
+include = ["reportlens*"]
+
+[tool.setuptools.package-data]
+reportlens = ["web/static/**/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+  "live: needs real OPENAI_API_KEY and spends money (deselected by default; run with -m live)",
+  "slow: takes more than ~10 s",
+]
+addopts = "-m 'not live'"

@@ -1,0 +1,155 @@
+/* Design tokens (measured from the reference UI, with AA contrast fixes - see research/06 sections 2 and 9).
+   Every colour is a variable so dark mode is a token override only. */
+
+@font-face {
+  font-family: "Geist";
+  src: url("../vendor/fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("../vendor/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+
+  /* surfaces */
+  --bg: #f8f8f8;
+  --surface: #ffffff;
+  --hover: #f4f4f5;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --card-border: #eef4f9;
+  --hairline: #e8e8eb;
+  --sidebar-edge: #f3f3f3;
+  --track: #f4f4f5;
+  --table-head: #f5f5f6;
+  --scrim: rgb(9 9 11 / 0.32);
+
+  /* text */
+  --fg: #09090b;
+  --fg-secondary: #71717a; /* 4.55:1 on #f8f8f8 */
+  --fg-meta: #6e6e78; /* AA replacement for the reference's #9f9fa9 (2.47:1) */
+  --fg-muted: #9f9fa9; /* decorative only (icons, disabled) */
+  --icon-idle: #8b8b95; /* action icons, 3:1 */
+
+  /* accent ramp */
+  --accent-50: #f2f7fd;
+  --accent-200: #e0ebfa;
+  --accent-300: #c3d8f5;
+  --accent-400: #568ed8;
+  --accent-500: #3788d8;
+  --accent-600: #2d72cf;
+  --chip-fg: #2762b8;
+  --bubble-bg: #2d72cf;
+  --on-accent: #ffffff;
+  --send-disabled: #afcfef;
+  --ring: #3788d8;
+  --brand-lens: #2d72cf;
+
+  /* status (RAGAS bands, toasts, alerts) */
+  --ok: #16a34a;
+  --ok-bg: #f0fdf4;
+  --ok-border: #bbf7d0;
+  --ok-strong: #166534;
+  --warn: #d97706;
+  --warn-bg: #fffbeb;
+  --warn-border: #fde68a;
+  --warn-strong: #92400e;
+  --bad: #dc2626;
+  --bad-bg: #fef2f2;
+  --bad-border: #fecaca;
+  --bad-strong: #991b1b;
+  --toast-bad-bg: #991b1b;
+
+  /* highlight (shared with the viewer) */
+  --highlight-bg-color: rgb(255 210 0 / 0.35);
+  --highlight-selected-bg-color: rgb(255 210 0 / 0.55);
+
+  /* geometry */
+  --sidebar-w: 256px;
+  --sidebar-rail-w: 56px;
+  --header-h: 52px;
+  --col-w: 768px;
+  --panel-w: 42%;
+  --r-chip: 5px;
+  --r-row: 8px;
+  --r-md: 12px;
+  --r-card: 16px;
+  --r-full: 9999px;
+
+  /* elevation */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-composer: 0 4px 16px rgb(0 0 0 / 0.06);
+  --shadow-fab: 0 1px 3px rgb(0 0 0 / 0.08);
+  --shadow-pop: 0 8px 28px rgb(0 0 0 / 0.14), 0 1px 3px rgb(0 0 0 / 0.08);
+
+  /* type */
+  --font: "Geist", ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* motion */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark: follows the OS unless the page sets data-theme="light". */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111113;
+    --surface: #18181b;
+    --hover: #26262b;
+    --border: #2e2e34;
+    --border-strong: #3f3f46;
+    --card-border: #26262b;
+    --hairline: #2a2a30;
+    --sidebar-edge: #1f1f23;
+    --track: #26262b;
+    --table-head: #202024;
+    --scrim: rgb(0 0 0 / 0.55);
+
+    --fg: #f4f4f5;
+    --fg-secondary: #a1a1aa;
+    --fg-meta: #9a9aa5;
+    --fg-muted: #71717a;
+    --icon-idle: #8e8e99;
+
+    --accent-50: #16243a;
+    --accent-200: #1c3250;
+    --accent-300: #2a4a78;
+    --accent-400: #568ed8;
+    --accent-500: #568ed8;
+    --accent-600: #4a82cc;
+    --chip-fg: #8db8ee;
+    --bubble-bg: #2d72cf;
+    --send-disabled: #2a4062;
+    --ring: #6aa2e6;
+    --brand-lens: #8db8ee;
+
+    --ok: #22c55e;
+    --ok-bg: #0f1f15;
+    --ok-border: #1d4a2c;
+    --ok-strong: #86efac;
+    --warn: #f59e0b;
+    --warn-bg: #241b0a;
+    --warn-border: #5a4311;
+    --warn-strong: #fcd34d;
+    --bad: #ef4444;
+    --bad-bg: #2a1214;
+    --bad-border: #5c2226;
+    --bad-strong: #fca5a5;
+    --toast-bad-bg: #7f1d1d;
+
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-composer: 0 4px 16px rgb(0 0 0 / 0.35);
+    --shadow-fab: 0 1px 3px rgb(0 0 0 / 0.4);
+    --shadow-pop: 0 8px 28px rgb(0 0 0 / 0.55), 0 1px 3px rgb(0 0 0 / 0.4);
+  }
+}
