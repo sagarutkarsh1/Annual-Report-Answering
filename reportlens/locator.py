@@ -723,6 +723,7 @@ class PdfiumDoc:
         self._lock = threading.Lock()
         self._sizes: Optional[list[tuple[float, float]]] = None
         self._squashed: Optional[list[str]] = None
+        self._derive_lock = threading.Lock()      # the whole-document values below are built once even when questions run in parallel
         self._closed = False
 
     # -- lifecycle
@@ -772,19 +773,20 @@ class PdfiumDoc:
 
     def page_sizes(self) -> list[tuple[float, float]]:
         """Visible page sizes in points, for laying out placeholders before pages render."""
-        if self._sizes is None:
-            sizes = []
-            with PDFIUM_LOCK:
-                self._check()
-                for i in range(self.page_count):
-                    page = self._pdf[i]
-                    try:
-                        geo = page_geometry(page)
-                    finally:
-                        page.close()
-                    sizes.append((geo.width, geo.height))
-            self._sizes = sizes
-        return self._sizes
+        with self._derive_lock:
+            if self._sizes is None:
+                sizes = []
+                with PDFIUM_LOCK:
+                    self._check()
+                    for i in range(self.page_count):
+                        page = self._pdf[i]
+                        try:
+                            geo = page_geometry(page)
+                        finally:
+                            page.close()
+                        sizes.append((geo.width, geo.height))
+                self._sizes = sizes
+            return self._sizes
 
     @property
     def squashed_ready(self) -> bool:
@@ -792,22 +794,25 @@ class PdfiumDoc:
 
     def squashed_pages(self) -> list[str]:
         """Per-page squashed text for the whole-document exact search (~10 ms/page, memoised; warm it at index time)."""
-        if self._squashed is None:
-            out = []
-            for i in range(self.page_count):
-                with PDFIUM_LOCK:
-                    self._check()
-                    page = self._pdf[i]
-                    try:
-                        tp = page.get_textpage()
+        if self._squashed is not None:
+            return self._squashed
+        with self._derive_lock:                   # parallel questions: one computes, the others wait and reuse it
+            if self._squashed is None:
+                out = []
+                for i in range(self.page_count):
+                    with PDFIUM_LOCK:
+                        self._check()
+                        page = self._pdf[i]
                         try:
-                            out.append(squash(page_chars(tp)))
+                            tp = page.get_textpage()
+                            try:
+                                out.append(squash(page_chars(tp)))
+                            finally:
+                                tp.close()
                         finally:
-                            tp.close()
-                    finally:
-                        page.close()
-            self._squashed = out
-        return self._squashed
+                            page.close()
+                self._squashed = out
+            return self._squashed
 
 
 # --------------------------------------------------------------------------------------- public API

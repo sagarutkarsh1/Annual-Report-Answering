@@ -28,6 +28,7 @@ export class Composer {
     this.streaming = false;
     this.filename = "";
     this.blocked = ""; // non-empty: questions are paused and this is why (usage budget used up)
+    this.busy = ""; // non-empty: a question set is being answered; typing is off meanwhile (Stop still works) and this is the placeholder
     this.build();
     this.apply();
   }
@@ -63,12 +64,13 @@ export class Composer {
     });
   }
 
-  /** @param {{mode: string, filename?: string, streaming?: boolean, blocked?: string}} next */
-  setState({ mode, filename = "", streaming = false, blocked = "" }) {
+  /** @param {{mode: string, filename?: string, streaming?: boolean, blocked?: string, busy?: string}} next */
+  setState({ mode, filename = "", streaming = false, blocked = "", busy = "" }) {
     this.mode = mode;
     this.filename = filename;
     this.streaming = streaming;
     this.blocked = blocked;
+    this.busy = busy;
     this.apply();
   }
 
@@ -79,13 +81,13 @@ export class Composer {
 
   /** Questions may be typed and sent. */
   get canAsk() {
-    return this.enabled && !this.blocked;
+    return this.enabled && !this.blocked && !this.busy;
   }
 
   apply() {
     const canAsk = this.canAsk;
     this.input.disabled = !canAsk;
-    this.input.placeholder = this.blocked && this.enabled ? this.blocked : PLACEHOLDER[this.mode] || PLACEHOLDER.empty;
+    this.input.placeholder = this.busy && this.enabled ? this.busy : this.blocked && this.enabled ? this.blocked : PLACEHOLDER[this.mode] || PLACEHOLDER.empty;
     this.el.classList.toggle("is-disabled", !canAsk);
     this.renderPill();
     this.renderSend();

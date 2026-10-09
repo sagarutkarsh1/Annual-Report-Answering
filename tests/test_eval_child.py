@@ -217,3 +217,99 @@ def test_the_parent_watch_starts_a_thread_on_linux_and_none_on_windows(monkeypat
     monkeypatch.setattr(indexing_worker.os, "name", "nt")
     indexing_worker.start_parent_watch()
     assert started == ["parent-watch", "started:_exit_when_parent_goes"]
+
+
+# ----------------------------------------------------------------------------------------------- a child kept for the next answer of a set
+LOOP_WORKER = (
+    "import json, os, sys\n"
+    "n = 0\n"
+    "for line in sys.stdin:\n"
+    "    n += 1\n"
+    "    print(json.dumps({'ev': 'metric', 'metric': 'faithfulness', 'value': 1.0, 'error': None}), flush=True)\n"
+    "    print(json.dumps({'ev': 'result', 'scores': {'status': 'done', 'faithfulness': 1.0, 'answer_relevancy': float(n), 'context_precision': float(os.getpid())}}), flush=True)\n")
+
+
+def spawned_children(monkeypatch: pytest.MonkeyPatch) -> list[subprocess.Popen]:
+    spawned: list[subprocess.Popen] = []
+    real = subprocess.Popen
+    monkeypatch.setattr(eval_child.subprocess, "Popen", lambda *a, **k: spawned.append(real(*a, **k)) or spawned[-1])
+    return spawned
+
+
+def test_a_warm_child_scores_the_next_answer_without_a_new_process(cfg: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_worker(tmp_path, monkeypatch, LOOP_WORKER)
+    spawned = spawned_children(monkeypatch)
+    seen: list[tuple] = []
+
+    async def go() -> list[EvalScores]:
+        ev = ChildEvaluator(cfg)
+        out = [await ev.evaluate("q1", ANSWER, CONTEXTS, on_metric=lambda *a: seen.append(a), keep_warm=True)]
+        assert lowmem.HEAVY_JOB_LOCK.locked() and spawned[0].poll() is None, "parked: the child lives and the gate stays ours"
+        out.append(await ev.evaluate("q2", ANSWER, CONTEXTS, keep_warm=lambda: True))
+        out.append(await ev.evaluate("q3", ANSWER, CONTEXTS, keep_warm=lambda: False))            # the last of the set
+        assert not lowmem.HEAVY_JOB_LOCK.locked() and spawned[0].poll() is not None
+        await ev.aclose()
+        return out
+
+    first, second, third = asyncio.run(go())
+    assert len(spawned) == 1, "one process scored all three"
+    assert (first.answer_relevancy, second.answer_relevancy, third.answer_relevancy) == (1.0, 2.0, 3.0)
+    assert first.context_precision == second.context_precision == third.context_precision
+    assert [m for m, _, _ in seen] == ["faithfulness"] and not lowmem.HEAVY_JOB_LOCK.locked()
+
+
+def test_a_warm_child_is_closed_after_the_idle_time_and_by_aclose(cfg: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_worker(tmp_path, monkeypatch, LOOP_WORKER)
+    spawned = spawned_children(monkeypatch)
+    monkeypatch.setattr(eval_child, "KEEP_WARM_S", 0.3)
+
+    async def go() -> None:
+        ev = ChildEvaluator(cfg)
+        await ev.evaluate("q", ANSWER, CONTEXTS, keep_warm=True)
+        assert lowmem.HEAVY_JOB_LOCK.locked()
+        await asyncio.sleep(1.2)                                                  # nobody asked again: it ends by itself
+        assert not lowmem.HEAVY_JOB_LOCK.locked() and spawned[0].poll() is not None
+        await ev.evaluate("q", ANSWER, CONTEXTS, keep_warm=True)                  # a new child for the next set
+        assert len(spawned) == 2 and lowmem.HEAVY_JOB_LOCK.locked()
+        await ev.aclose()                                                         # shutdown: the gate comes back too
+        assert not lowmem.HEAVY_JOB_LOCK.locked() and spawned[1].poll() is not None
+
+    asyncio.run(go())
+
+
+def test_a_warm_child_that_died_is_replaced_and_an_ordinary_call_never_parks(cfg: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_worker(tmp_path, monkeypatch, LOOP_WORKER)
+    spawned = spawned_children(monkeypatch)
+
+    async def go() -> None:
+        ev = ChildEvaluator(cfg)
+        await ev.evaluate("q", ANSWER, CONTEXTS, keep_warm=True)
+        spawned[0].kill()
+        spawned[0].wait(10)
+        scores = await ev.evaluate("q", ANSWER, CONTEXTS)                         # the parked child is gone: a new one is started
+        assert scores.status == "done" and len(spawned) == 2
+        assert not lowmem.HEAVY_JOB_LOCK.locked() and spawned[1].poll() is not None, "no keep_warm: nothing is kept"
+
+    asyncio.run(go())
+
+
+def test_a_failed_scoring_ends_the_warm_period(cfg: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_worker(tmp_path, monkeypatch, "import sys\nsys.stdin.readline()\nsys.exit(3)\n")
+    scores = asyncio.run(ChildEvaluator(cfg).evaluate("q", ANSWER, CONTEXTS, keep_warm=True))
+    assert scores.status == "failed" and not lowmem.HEAVY_JOB_LOCK.locked()
+
+
+def test_the_real_worker_scores_several_answers_in_one_process(cfg: Settings, mock: MockServer, monkeypatch: pytest.MonkeyPatch) -> None:
+    spawned = spawned_children(monkeypatch)
+
+    async def go() -> list[EvalScores]:
+        ev = ChildEvaluator(cfg)
+        out = [await ev.evaluate("What was revenue?", ANSWER, CONTEXTS, keep_warm=True),
+               await ev.evaluate("What was operating profit?", ANSWER, CONTEXTS, keep_warm=lambda: False)]
+        await ev.aclose()
+        return out
+
+    first, second = asyncio.run(go())
+    assert len(spawned) == 1, "the second answer reused the child (RAGAS was imported once)"
+    assert first.status in ("done", "partial") and second.status in ("done", "partial")
+    assert not lowmem.HEAVY_JOB_LOCK.locked() and spawned[0].poll() is not None

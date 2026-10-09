@@ -333,7 +333,7 @@ def _start_mock(settings: Settings) -> tuple[Any, Settings]:
     nothing can reach the real API, whatever is in .env."""
     from devtools.mock_openai import start_mock_server
 
-    mock = start_mock_server()
+    mock = start_mock_server(delay_ms=settings.demo_mock_delay_ms)
     log.warning("DEMO MODE: OpenAI traffic goes to the built-in mock at %s. Answers are canned extracts and scores are meaningless.",
                 mock.base_url)
     return mock, settings.with_(openai_base_url=mock.base_url, openai_api_key="sk-demo-mock-not-a-real-key")

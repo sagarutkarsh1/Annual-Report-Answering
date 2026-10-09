@@ -1,0 +1,288 @@
+/* questionset.css - the question-set card (js/questionset.js), the batch progress bar and the queued-answer caption. */
+
+/* ---- the empty chat when the card is shown: the hero gets out of its way ---- */
+.hero--set {
+  margin-top: clamp(8px, 4vh, 36px);
+}
+.hero--set .hints {
+  display: none;
+}
+
+.qset {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin: 16px auto 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.qset__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.qset__title {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.qset__count {
+  color: var(--fg-secondary);
+  font-size: 13px;
+  line-height: 18px;
+}
+.qset__max {
+  color: var(--fg-meta);
+}
+.qset__max.is-full {
+  color: var(--warn-strong);
+  font-weight: 500;
+}
+
+.qset__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+.qset__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 2px 4px 2px 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-row);
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.qset__row:hover,
+.qset__row:focus-within {
+  background: var(--hover);
+}
+.qset__row:focus-within {
+  border-color: var(--accent-300);
+}
+.qset__num {
+  flex: none;
+  width: 26px;
+  padding-top: 7px;
+  color: var(--fg-meta);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: right;
+}
+.qset__text {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 6px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 20px;
+  cursor: text;
+}
+.qset__text:read-only {
+  cursor: default;
+}
+.qset__remove {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-top: 3px;
+}
+.qset__remove:hover:not(:disabled) {
+  color: var(--bad);
+}
+
+.qset__add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.qset__add-input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 14px;
+}
+.qset__add-input::placeholder {
+  color: var(--fg-meta);
+  opacity: 1;
+}
+.qset__add-input:focus-visible {
+  border-style: solid;
+  border-color: var(--accent-300);
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+.qset__add-input:disabled {
+  background: var(--hover);
+  cursor: not-allowed;
+}
+.qset__add-btn {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+.qset__add-btn .icon {
+  margin-right: -2px;
+}
+
+.qset__error {
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--bad-border);
+  border-radius: var(--r-row);
+  background: var(--bad-bg);
+  color: var(--bad-strong);
+  font-size: 13px;
+  line-height: 18px;
+}
+.qset__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.qset__spacer {
+  flex: 1;
+}
+.qset__reset {
+  border-color: transparent;
+  background: transparent;
+  color: var(--fg-secondary);
+}
+.qset__reset:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--fg);
+}
+.qset__run {
+  height: 40px;
+  padding: 0 20px;
+}
+.qset__run:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.qset__blocked {
+  margin: 0;
+  color: var(--warn-strong);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: right;
+}
+.qset__note {
+  margin: 0;
+  color: var(--fg-meta);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+@media (max-width: 520px) {
+  .qset {
+    padding: 12px;
+  }
+  .qset__actions {
+    flex-wrap: wrap;
+  }
+  .qset__run {
+    flex: 1 1 100%;
+    order: -1;
+  }
+  .qset__spacer {
+    display: none;
+  }
+  .qset__text {
+    font-size: 16px; /* avoids the iOS zoom-on-focus */
+  }
+  .qset__add-input {
+    font-size: 16px;
+  }
+}
+
+/* ---- progress bar at the top of the chat while the set is answered ---- */
+.batchbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 16px 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--fg-secondary);
+  font-size: 13px;
+  line-height: 18px;
+}
+.batchbar__label {
+  flex: none;
+  color: var(--fg);
+  font-weight: 500;
+}
+.batchbar__track {
+  flex: 1;
+  min-width: 40px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--r-full);
+  background: var(--track);
+}
+.batchbar__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--accent-500);
+  transition: width 0.3s var(--ease-out);
+}
+.batchbar[data-tone="ok"] .batchbar__fill {
+  background: var(--ok);
+}
+.batchbar[data-tone="warn"] .batchbar__fill {
+  background: var(--warn);
+}
+@media (max-width: 767px) {
+  .batchbar {
+    margin: 0 12px 8px;
+  }
+}
+
+/* ---- an answer waiting for a free slot ---- */
+.answer-queued {
+  margin: 0;
+  color: var(--fg-meta);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+@media (max-width: 767px) {
+  .hero--set .hero__logo,
+  .hero--set .hero__meta {
+    display: none;
+  }
+  .hero--set {
+    margin-top: 4px;
+  }
+  .qset__remove {
+    width: 36px;
+    height: 36px;
+    margin-top: 0;
+  }
+}

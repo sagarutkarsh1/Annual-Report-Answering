@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import inspect
 import logging
 import os
 import re
@@ -143,6 +144,25 @@ def display_filename(filename: str, fallback: str) -> str:
     name = re.split(r"[\\/]", filename or "")[-1]
     name = " ".join(re.sub(r"[\x00-\x1f\x7f]", " ", name).split())
     return name[:MAX_DISPLAY_NAME_CHARS] or fallback
+
+
+def clean_questions(questions: Iterable[str], limit: int) -> list[str]:
+    """The questions of a batch as they will be asked: trimmed, blanks and exact duplicates (any capitalisation) dropped, order
+    kept.  400 empty_question when nothing is left, too_many_questions above `limit`, question_too_long above 4000 characters."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in questions or ():
+        q = (raw or "").strip() if isinstance(raw, str) else ""
+        if q and q.casefold() not in seen:
+            seen.add(q.casefold())
+            out.append(q)
+    if not out:
+        raise ServiceError("empty_question", "Add at least one question first.", 400)
+    if len(out) > limit:
+        raise ServiceError("too_many_questions", f"A set can hold at most {limit} questions; this one has {len(out)}.", 400)
+    if any(len(q) > MAX_QUESTION_CHARS for q in out):
+        raise ServiceError("question_too_long", f"Questions are limited to {MAX_QUESTION_CHARS} characters.", 400)
+    return out
 
 
 def select_eval_contexts(contexts: list[ContextPage], citations: list[Citation], cap: int) -> list[ContextPage]:
@@ -324,12 +344,39 @@ class _Resources:
 
 @dataclass
 class _Run:
-    """One in-flight question (at most one per session)."""
+    """One in-flight question; a session has at most one registered run.  A batch registers one master run (its children are
+    the questions' own runs: they share the master's `cancel`, so stopping the batch stops them all)."""
     cancel: threading.Event = field(default_factory=threading.Event)     # tells the engine thread to stop
     lock: threading.Lock = field(default_factory=threading.Lock)         # serialises the terminal write vs the abandon path
     terminal: bool = False                                                # the assistant message holds its final state
     abandoned: bool = False                                               # the consumer is gone
     thread: Optional[threading.Thread] = None
+    active: int = 1                                                       # questions being worked on now: the budget holds money back for each
+    children: "list[_Run]" = field(default_factory=list)
+
+
+@dataclass
+class _Turn:
+    """One question on its way to an answer: its two stored rows and what the stream needs to know about it."""
+    run: _Run
+    user: Message
+    assistant: Message
+    history: list[dict] = field(default_factory=list)
+    partial: list[str] = field(default_factory=list)                     # tokens streamed so far (kept on the row if the run fails)
+    index: Optional[int] = None                                           # position in a batch (None: a single question)
+    silent: bool = False                                                  # nobody is listening any more: no closing events
+    outcome: str = "pending"                                              # pending | answered | failed
+
+
+class _Gates:
+    """What a batch shares with every other batch of the process, so peak memory stays flat however many are running: a few agent
+    slots, fewer scoring slots, and (small hosts) a lock that makes questions run one at a time while a report is being indexed."""
+
+    def __init__(self, agents: int, evaluations: int):
+        self.agent = asyncio.Semaphore(max(1, agents))
+        self.evaluation = asyncio.Semaphore(max(1, evaluations))
+        self.serial = asyncio.Lock()
+        self.unfinished = 0                      # questions of all running batches that are not completely done (answered and scored, or failed)
 
 
 # ----------------------------------------------------------------------------------------------- the service
@@ -363,6 +410,7 @@ class ReportLensService:
         self._load_locks: dict[str, threading.Lock] = {}      # building one session's resources
         self._runs: dict[str, _Run] = {}                      # touched on the event loop (and read by delete_session)
         self._eval_tasks: dict[str, asyncio.Task] = {}        # message id -> scoring task (strong refs keep them alive)
+        self._gates: Optional[_Gates] = None                  # shared by every batch, built on first use (on the event loop)
         self._env_info: Optional[dict] = None
         self._budget = UsageBudget(settings, self._store)     # no-ops unless BUDGET_USD_TOTAL > 0
         self._create_lock = threading.Lock()                  # MAX_SESSIONS: count and insert as one step
@@ -500,7 +548,8 @@ class ReportLensService:
 
     def _reserve(self) -> float:
         """Budget held back for work that is running right now and whose cost is not stored yet (questions, scoring tasks)."""
-        return len(self._runs) * QUESTION_RESERVE_USD + len(self._eval_tasks) * self._settings.eval_cost_estimate_usd
+        running = sum(run.active + sum(child.active for child in run.children) for run in list(self._runs.values()))
+        return running * QUESTION_RESERVE_USD + len(self._eval_tasks) * self._settings.eval_cost_estimate_usd
 
     def _present(self, msg: Message) -> Message:
         """A score that is 'pending/running' with no task behind it (the process restarted, or the task was cancelled before
@@ -547,6 +596,8 @@ class ReportLensService:
         doc = source.document
         if doc is None or doc.status != "ready":
             raise ServiceError("document_not_ready", "That chat has no indexed document to reuse yet.", 409)
+        if not self._pdf_path(source_sid, doc).is_file():          # the static demo: a transcript without its PDF
+            raise ServiceError("document_not_available", "This report is not stored on the server. Start a chat and upload it.", 409)
         new = self._store.create_session(owner=owner)
         dest = self._session_dir(new.id)
         try:
@@ -730,12 +781,49 @@ class ReportLensService:
         the first event.  Closing the generator (client disconnect) cancels the agent run; scoring carries on regardless.
         `llm`: the request's own provider and key (a visitor's), default the server's."""
         s = llm or self._settings
-        engine = self._qa.with_settings(llm) if llm is not None and hasattr(self._qa, "with_settings") else self._qa
+        engine = self._engine_for(llm)
         question = (content or "").strip()
         if not question:
             raise ServiceError("empty_question", "Type a question first.", 400)
         if len(question) > MAX_QUESTION_CHARS:
             raise ServiceError("question_too_long", f"Questions are limited to {MAX_QUESTION_CHARS} characters.", 400)
+        doc = await self._check_can_ask(sid, s)
+        if sid in self._runs:                          # no await between this check and the registration below
+            raise ServiceError("session_busy", "The previous question is still being answered. Wait for it to finish or press Stop.", 409)
+        run = self._runs[sid] = _Run()
+        turn: Optional[_Turn] = None
+        try:
+            began = asyncio.ensure_future(asyncio.to_thread(self._begin_turn, sid, question) if s.key_source == "server"
+                                          else asyncio.to_thread(self._begin_turn, sid, question, s.key_source))
+            try:
+                user_msg, assistant, history = await asyncio.shield(began)
+            except SessionNotFound as exc:
+                raise ServiceError("session_not_found", "That chat no longer exists.", 404) from exc
+            except asyncio.CancelledError:
+                began.add_done_callback(self._cancel_late_turn)    # the thread still writes both rows; do not leave them 'streaming'
+                raise
+            turn = _Turn(run, user_msg, assistant, history)
+            yield "message_start", {"user_message": _dump(user_msg), "message_id": assistant.id, "created_at": assistant.created_at}
+            answer = self._answer(sid, doc, turn, engine, s)
+            try:
+                async for event in answer:
+                    yield event
+            finally:
+                await answer.aclose()                  # releases the document lease and the rewrite task before the cleanup below
+            if not turn.silent:
+                yield "done", {}
+        finally:
+            self._runs.pop(sid, None)
+            self._budget.invalidate()
+            if turn is not None:
+                await self._abandon(run, turn.assistant, turn.partial)
+
+    def _engine_for(self, llm: Optional[Settings]) -> Any:
+        return self._qa.with_settings(llm) if llm is not None and hasattr(self._qa, "with_settings") else self._qa
+
+    async def _check_can_ask(self, sid: str, s: Settings) -> DocumentInfo:
+        """What `ask` and `ask_batch` both require before anything is stored: a writable chat with a ready document, a configured
+        provider and, on the server's own key, budget left.  Raises ServiceError (404 / 403 / 409 / 503 / 402)."""
         doc = (await asyncio.to_thread(self._require_writable, sid)).document
         if doc is None or doc.status != "ready":
             raise ServiceError("document_not_ready", "The document is not ready yet. You can ask once it has been indexed.", 409)
@@ -743,109 +831,117 @@ class ReportLensService:
             raise ServiceError("openai_not_configured", "OpenAI API key is not configured - add OPENAI_API_KEY to .env and restart.", 503)
         if s.key_source == "server":
             await asyncio.to_thread(self._budget.check, reserve_usd=self._reserve())
-        if sid in self._runs:                          # no await between this check and the registration below
-            raise ServiceError("session_busy", "The previous question is still being answered. Wait for it to finish or press Stop.", 409)
-        run = self._runs[sid] = _Run()
+        return doc
+
+    async def _answer(self, sid: str, doc: DocumentInfo, turn: _Turn, engine: Any, s: Settings,
+                      gates: Optional[_Gates] = None) -> AsyncIterator[tuple[str, dict]]:
+        """Everything between `message_start` and `done` for ONE question whose rows already exist: the agent run (steps, tokens,
+        citations), the stored answer (`answer_done`), the scoring (`eval_*`).  A failure ends as an `error` event with the
+        row persisted as failed; the caller adds `done` unless `turn.silent`.  `gates` (a batch) makes the run wait for a free
+        agent slot, checks the budget just before it starts and gives scoring its own small queue."""
+        run, assistant, question, history, partial = turn.run, turn.assistant, turn.user.content, turn.history, turn.partial
+        mid, sid_short = assistant.id, sid[:8]
         rewrite: Optional[asyncio.Task] = None
         res: Optional[_Resources] = None
-        assistant: Optional[Message] = None
-        partial: list[str] = []
+        slot: list[Callable[[], None]] = []             # the agent slot of a batch question, until it is given back
+
+        def give_back() -> None:
+            """Free the agent slot and the budget reserve.  Only once the answer (or its failure) is stored and its scoring is
+            queued: the next question's budget check must see what this one cost."""
+            while slot:
+                slot.pop()()
+            if gates is not None:
+                run.active = 0
+
         try:
-            turn = asyncio.ensure_future(asyncio.to_thread(self._begin_turn, sid, question) if s.key_source == "server"
-                                         else asyncio.to_thread(self._begin_turn, sid, question, s.key_source))
-            try:
-                user_msg, assistant, history = await asyncio.shield(turn)
-            except SessionNotFound as exc:
-                raise ServiceError("session_not_found", "That chat no longer exists.", 404) from exc
-            except asyncio.CancelledError:
-                turn.add_done_callback(self._cancel_late_turn)    # the thread still writes both rows; do not leave them 'streaming'
-                raise
-            mid = assistant.id
-            yield "message_start", {"user_message": _dump(user_msg), "message_id": mid, "created_at": assistant.created_at}
             try:
                 if history:                            # runs beside the agent; only the scoring needs its result
                     rewrite = asyncio.create_task(self._rewrite(question, history, engine), name=f"rewrite-{mid[:8]}")
-                try:
-                    res = await self._lease_for_answers(sid)
-                except ServiceError as exc:
-                    for event in await self._fail(run, assistant, exc.code, exc.message, partial):
-                        yield event
-                    return
-                ctx = CitationContext(doc_display_name=doc.filename, pdf=res.pdf, tree=res.tree, printed_labels=res.labels)
-
-                inbox: asyncio.Queue = asyncio.Queue()
-                run.thread = self._spawn_engine(asyncio.get_running_loop(), inbox, run, dict(
-                    session_id=sid, doc=doc, question=question, history=history, ctx=ctx, cancel=run.cancel), engine)
-                final: Optional[dict] = None
-                failure: Optional[BaseException] = None
-                while True:
-                    item = await inbox.get()
-                    if item is _END:
-                        break
-                    if isinstance(item, BaseException):
-                        failure = item
-                        break
-                    kind = item.get("type")
-                    if kind == "step":
-                        yield "step", {"message_id": mid, "step": _dump(item["step"])}
-                    elif kind == "step_done":
-                        yield "step_done", {"message_id": mid, "step_id": item.get("step_id"), "elapsed_ms": item.get("elapsed_ms"),
-                                            "label": item.get("label"), "pages": list(item.get("pages") or [])}
-                    elif kind == "token":
-                        if item.get("text"):
-                            partial.append(item["text"])
-                            yield "token", {"message_id": mid, "text": item["text"]}
-                    elif kind == "citation":
-                        yield "citation", {"message_id": mid, "citation": _dump(item["citation"])}
-                    elif kind == "final":
-                        final = item
-                    else:
-                        log.debug("ignoring engine event %r", kind)
-
-                if final is None:
-                    code, message = self._failure_details(failure, run)
-                    for event in await self._fail(run, assistant, code, message, partial):
-                        yield event
-                    return
-
-                answer, contexts = self._build_answer(assistant, final)
-                n_read = len({c.page for c in contexts})
-                reason = self._skip_reason(answer.content, contexts)
-                selected = [] if reason else select_eval_contexts(contexts, answer.citations, self._settings.eval_max_contexts)
-                answer.evaluation = (EvalScores(status="skipped", skipped_reason=reason, n_contexts_input=n_read) if reason
-                                     else EvalScores(status="pending", n_contexts_input=n_read, n_contexts_scored=len(selected)))
-                if not await asyncio.to_thread(self._write_terminal, run, answer, contexts):
-                    return                             # abandoned while saving; the finally block has cleaned up
-                sink: Optional[asyncio.Queue] = None
-                if not reason:                         # no await since the terminal write: the task exists before anyone can leave
-                    sink = asyncio.Queue()
-                    pending_rewrite, rewrite = rewrite, None     # the scoring task owns the rewrite from here on
-                    standalone = (lambda: pending_rewrite) if pending_rewrite is not None else (lambda: self._constant(question))
-                    self._start_eval(sid, mid, standalone, answer.content, selected, n_read, sink, settings=s)
-                yield "answer_done", {"message": _dump(answer)}
-                if sink is not None:
-                    yield "eval_started", {"message_id": mid, "metrics": list(_METRICS), "n_contexts": len(selected)}
-                    while True:
-                        event = await sink.get()
-                        if event is None:              # the task ended without a result (cancelled)
-                            break
-                        yield event
-                        if event[0] == "eval_done":
-                            break
-                yield "done", {}
-            except Exception:  # noqa: BLE001 - after message_start every failure must end as an error event, not a dead stream
-                log.exception("question on session %s failed unexpectedly", sid)
-                for event in await self._fail(run, assistant, "agent_failed", "Something went wrong while answering. Please try again.", partial):
+                if gates is not None:
+                    slot.append(await self._enter_agent_slot(gates))
+                    if s.key_source == "server":       # checked when this question really starts: a batch stops cleanly when the money runs out
+                        await asyncio.to_thread(self._budget.check, reserve_usd=self._reserve())
+                    run.active = 1
+                res = await self._lease_for_answers(sid)
+            except ServiceError as exc:
+                for event in await self._fail(turn, exc.code, exc.message):
                     yield event
+                return
+            ctx = CitationContext(doc_display_name=doc.filename, pdf=res.pdf, tree=res.tree, printed_labels=res.labels)
+
+            inbox: asyncio.Queue = asyncio.Queue()
+            run.thread = self._spawn_engine(asyncio.get_running_loop(), inbox, run, dict(
+                session_id=sid, doc=doc, question=question, history=history, ctx=ctx, cancel=run.cancel), engine, turn.index)
+            final: Optional[dict] = None
+            failure: Optional[BaseException] = None
+            while True:
+                item = await inbox.get()
+                if item is _END:
+                    break
+                if isinstance(item, BaseException):
+                    failure = item
+                    break
+                kind = item.get("type")
+                if kind == "step":
+                    yield "step", {"message_id": mid, "step": _dump(item["step"])}
+                elif kind == "step_done":
+                    yield "step_done", {"message_id": mid, "step_id": item.get("step_id"), "elapsed_ms": item.get("elapsed_ms"),
+                                        "label": item.get("label"), "pages": list(item.get("pages") or [])}
+                elif kind == "token":
+                    if item.get("text"):
+                        partial.append(item["text"])
+                        yield "token", {"message_id": mid, "text": item["text"]}
+                elif kind == "citation":
+                    yield "citation", {"message_id": mid, "citation": _dump(item["citation"])}
+                elif kind == "final":
+                    final = item
+                else:
+                    log.debug("ignoring engine event %r", kind)
+            if final is None:
+                code, message = self._failure_details(failure, run)
+                events = await self._fail(turn, code, message)
+                give_back()
+                for event in events:
+                    yield event
+                return
+
+            answer, contexts = self._build_answer(assistant, final)
+            n_read = len({c.page for c in contexts})
+            reason = self._skip_reason(answer.content, contexts)
+            selected = [] if reason else select_eval_contexts(contexts, answer.citations, self._settings.eval_max_contexts)
+            answer.evaluation = (EvalScores(status="skipped", skipped_reason=reason, n_contexts_input=n_read) if reason
+                                 else EvalScores(status="pending", n_contexts_input=n_read, n_contexts_scored=len(selected)))
+            if not await asyncio.to_thread(self._write_terminal, run, answer, contexts):
+                turn.silent = True                     # abandoned while saving; the caller's cleanup has taken over
+                return
+            turn.outcome = "answered"
+            sink: Optional[asyncio.Queue] = None
+            if not reason:                             # no await since the terminal write: the task exists before anyone can leave
+                sink = asyncio.Queue()
+                pending_rewrite, rewrite = rewrite, None     # the scoring task owns the rewrite from here on
+                standalone = (lambda: pending_rewrite) if pending_rewrite is not None else (lambda: self._constant(question))
+                self._start_eval(sid, mid, standalone, answer.content, selected, n_read, sink, settings=s, gates=gates)
+            give_back()                                # the next question may start (and check the budget) while this one is scored
+            yield "answer_done", {"message": _dump(answer)}
+            if sink is not None:
+                yield "eval_started", {"message_id": mid, "metrics": list(_METRICS), "n_contexts": len(selected)}
+                while True:
+                    event = await sink.get()
+                    if event is None:                  # the task ended without a result (cancelled)
+                        break
+                    yield event
+                    if event[0] == "eval_done":
+                        break
+        except Exception:  # noqa: BLE001 - after message_start every failure must end as an error event, not a dead stream
+            log.exception("question on session %s failed unexpectedly", sid_short)
+            for event in await self._fail(turn, "agent_failed", "Something went wrong while answering. Please try again."):
+                yield event
         finally:
-            self._runs.pop(sid, None)
-            self._budget.invalidate()
+            give_back()
             if res is not None:
                 self._release(res)
             if rewrite is not None:
                 rewrite.cancel()
-            if assistant is not None:
-                await self._abandon(run, assistant, partial)
 
     def _begin_turn(self, sid: str, question: str, key_source: str = "server") -> tuple[Message, Message, list[dict]]:
         """Persist the question and the (still empty) answer; build the history; title the session on its first question."""
@@ -865,8 +961,146 @@ class ReportLensService:
             _, reply, _ = turn.result()
             self._store.update_message(reply.model_copy(update={"status": "error", "error": "cancelled"}))
 
+    # ------------------------------------------------------------------------------------------- ask_batch
+    def _batch_gates(self) -> _Gates:
+        if self._gates is None:                        # on the event loop: no thread can race this
+            s = self._settings
+            self._gates = _Gates(s.batch_concurrency, 1 if s.low_memory else 2)
+        return self._gates
+
+    async def _enter_agent_slot(self, gates: _Gates) -> Callable[[], None]:
+        """Wait for one of `batch_concurrency` agent slots.  While this process indexes a report (small hosts: that child needs
+        ~280 MB) a question that starts also takes the one-at-a-time lock.  Returns the function that gives the slot back."""
+        from .lowmem import INDEXING_ACTIVE
+
+        await gates.agent.acquire()
+        serial = False
+        try:
+            if self._settings.low_memory and INDEXING_ACTIVE.is_set():
+                await gates.serial.acquire()
+                serial = True
+        except BaseException:
+            gates.agent.release()
+            raise
+
+        def leave() -> None:
+            if serial:
+                gates.serial.release()
+            gates.agent.release()
+
+        return leave
+
+    def _begin_batch(self, sid: str, questions: list[str], key_source: str = "server") -> list[tuple[Message, Message]]:
+        """Persist every question and its (still empty) answer up front, in question order; title the session on its first question."""
+        session = self._require_session(sid)
+        first_ever = not any(m.role == "user" for m in self._store.list_messages(sid))
+        rows: list[tuple[Message, Message]] = []
+        for question in questions:
+            user = Message(id=new_id(), session_id=sid, role="user", content=question, status="answered", created_at=now_iso())
+            reply = Message(id=new_id(), session_id=sid, role="assistant", status="streaming", created_at=now_iso(), key_source=key_source)
+            self._store.add_message(user)
+            self._store.add_message(reply)
+            rows.append((user, reply))
+        if session.title == DEFAULT_TITLE and first_ever:
+            self._store.rename_session(sid, make_title(questions[0]))
+        return rows
+
+    def _cancel_late_batch(self, began: "asyncio.Future[list[tuple[Message, Message]]]") -> None:
+        if not began.cancelled() and began.exception() is None:
+            for _, reply in began.result():
+                self._store.update_message(reply.model_copy(update={"status": "error", "error": "cancelled"}))
+
+    async def ask_batch(self, sid: str, questions: list[str], llm: Optional[Settings] = None) -> AsyncIterator[tuple[str, dict]]:
+        """Answer a set of independent questions, `batch_concurrency` at a time, and yield (sse_event_name, payload) as
+        `ask` does (docs/ARCHITECTURE.md section 13).  Every event of a question carries its 0-based `index` beside `message_id`.
+        `batch_start` comes first (all rows already exist, in question order), `batch_done` when every answer has finished (scoring
+        may still be running), `done` last.  Validation problems raise ServiceError before the first event.  One failing question
+        never stops the others; closing the generator cancels all that are still running."""
+        s = llm or self._settings
+        engine = self._engine_for(llm)
+        asked = clean_questions(questions, self._settings.max_batch_questions)
+        doc = await self._check_can_ask(sid, s)
+        if sid in self._runs:                          # no await between this check and the registration below
+            raise ServiceError("session_busy", "Questions are still being answered in this chat. Wait for them to finish or press Stop.", 409)
+        master = self._runs[sid] = _Run(active=0)
+        gates = self._batch_gates()
+        turns: list[_Turn] = []
+        workers: list[asyncio.Task] = []
+        try:
+            began = asyncio.ensure_future(asyncio.to_thread(self._begin_batch, sid, asked, s.key_source))
+            try:
+                rows = await asyncio.shield(began)
+            except SessionNotFound as exc:
+                raise ServiceError("session_not_found", "That chat no longer exists.", 404) from exc
+            except asyncio.CancelledError:
+                began.add_done_callback(self._cancel_late_batch)
+                raise
+            for index, (user, reply) in enumerate(rows):
+                child = _Run(cancel=master.cancel, active=0)
+                master.children.append(child)
+                turns.append(_Turn(child, user, reply, index=index))
+            inbox: asyncio.Queue = asyncio.Queue()       # the questions start now; their events wait here behind `batch_start`
+            loop = asyncio.get_running_loop()
+            gates.unfinished += len(turns)
+            for turn in turns:
+                worker = loop.create_task(self._batch_worker(sid, doc, turn, engine, s, gates, inbox), name=f"batch-{turn.index}")
+                worker.add_done_callback(lambda _w, g=gates: setattr(g, "unfinished", g.unfinished - 1))       # also for one cancelled before it started
+                workers.append(worker)
+            yield "batch_start", {"items": [{"index": t.index, "question": t.user.content, "user_message": _dump(t.user),
+                                             "message_id": t.assistant.id} for t in turns],
+                                  "concurrency": self._settings.batch_concurrency}
+            running, answered, failed, decided, sent_done = len(turns), 0, 0, set(), False
+            while running:
+                index, name, data = await inbox.get()
+                if name is None:                       # that question has finished (answer and scoring)
+                    running -= 1
+                    if index not in decided:           # it ended without a verdict (only when its consumer had left): count it as failed
+                        decided.add(index)
+                        failed += 1
+                elif name in ("answer_done", "error"):
+                    if index not in decided:
+                        decided.add(index)
+                        answered, failed = answered + (name == "answer_done"), failed + (name == "error")
+                    yield name, {**data, "index": index}
+                else:
+                    yield name, {**data, "index": index}
+                if not sent_done and len(decided) == len(turns):       # every answer is in: scoring may still be running
+                    sent_done = True
+                    yield "batch_done", {"answered": answered, "failed": failed}
+            yield "done", {}
+        finally:
+            self._runs.pop(sid, None)
+            if any(not w.done() for w in workers):
+                master.cancel.set()                    # the consumer left (or the task was cancelled): stop every run
+                for worker in workers:
+                    worker.cancel()
+            if workers:
+                await asyncio.gather(*workers, return_exceptions=True)
+            self._budget.invalidate()
+            if turns:
+                await asyncio.gather(*(self._abandon(t.run, t.assistant, t.partial) for t in turns), return_exceptions=True)
+
+    async def _batch_worker(self, sid: str, doc: DocumentInfo, turn: _Turn, engine: Any, s: Settings, gates: _Gates,
+                            inbox: asyncio.Queue) -> None:
+        """One question of a batch: its events go to `inbox` tagged with the question's index; `(index, None, None)` ends it."""
+        index = turn.index
+        answer = self._answer(sid, doc, turn, engine, s, gates)
+        try:
+            async for name, data in answer:
+                inbox.put_nowait((index, name, data))
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001 - _answer reports its own failures; this only keeps one question from taking the batch down
+            log.exception("question %s of a batch on session %s failed unexpectedly", index, sid[:8])
+            for name, data in await self._fail(turn, "agent_failed", "Something went wrong while answering. Please try again."):
+                inbox.put_nowait((index, name, data))
+        finally:
+            with contextlib.suppress(Exception):
+                await answer.aclose()
+            inbox.put_nowait((index, None, None))
+
     def _spawn_engine(self, loop: asyncio.AbstractEventLoop, inbox: asyncio.Queue, run: _Run, kwargs: dict,
-                      engine: Any = None) -> threading.Thread:
+                      engine: Any = None, index: Optional[int] = None) -> threading.Thread:
         """Run the sync QA generator on a dedicated daemon thread, forwarding every event (and its failure) to `inbox`."""
         def post(item: Any) -> None:
             try:
@@ -893,7 +1127,7 @@ class ReportLensService:
                         log.debug("closing the engine generator failed", exc_info=True)
                 post(_END)
 
-        thread = threading.Thread(target=work, name=f"ask-{kwargs['session_id'][:8]}", daemon=True)
+        thread = threading.Thread(target=work, name=f"ask-{kwargs['session_id'][:8]}" + ("" if index is None else f"-{index}"), daemon=True)
         thread.start()
         return thread
 
@@ -938,14 +1172,16 @@ class ReportLensService:
             run.terminal = True
             return True
 
-    async def _fail(self, run: _Run, assistant: Message, code: str, message: str, partial: list[str]) -> list[tuple[str, dict]]:
-        """Persist the assistant message as failed and return the events that tell the client (none if it is gone)."""
-        failed = assistant.model_copy(update={
+    async def _fail(self, turn: _Turn, code: str, message: str) -> list[tuple[str, dict]]:
+        """Persist the assistant message as failed and return the `error` event that tells the client (none if it is gone)."""
+        failed = turn.assistant.model_copy(update={
             "status": "error", "error": code if code in _CODE_ERRORS else message,
-            "content": strip_markers("".join(partial)).strip()})
-        if not await asyncio.to_thread(self._write_terminal, run, failed):
+            "content": strip_markers("".join(turn.partial)).strip()})
+        if not await asyncio.to_thread(self._write_terminal, turn.run, failed):
+            turn.silent = True
             return []
-        return [("error", {"code": code, "message": message, "message_id": assistant.id}), ("done", {})]
+        turn.outcome = "failed"
+        return [("error", {"code": code, "message": message, "message_id": turn.assistant.id})]
 
     async def _abandon(self, run: _Run, assistant: Message, partial: list[str]) -> None:
         """Cleanup when the stream ends.  If the message never reached a final state (client disconnect, task cancelled, server
@@ -1022,12 +1258,14 @@ class ReportLensService:
         return self._evaluator
 
     def _start_eval(self, sid: str, mid: str, question: Callable[[], Awaitable[str]], answer: str, contexts: list[ContextPage],
-                    n_read: int, sink: Optional[asyncio.Queue], *, settings: Optional[Settings] = None) -> asyncio.Task:
+                    n_read: int, sink: Optional[asyncio.Queue], *, settings: Optional[Settings] = None,
+                    gates: Optional[_Gates] = None) -> asyncio.Task:
         """Start scoring as a task of its own (strongly referenced here, so it outlives the request that started it).
-        `question` is a factory so nothing is created when the run is refused."""
+        `question` is a factory so nothing is created when the run is refused.  `gates` (a batch): the scoring waits for a free
+        slot first, so only a few scorings (each a RAGAS run) are in memory at once."""
         if mid in self._eval_tasks:
             raise ServiceError("evaluation_in_progress", "This answer is already being evaluated.", 409)
-        task = asyncio.get_running_loop().create_task(self._eval_job(sid, mid, question(), answer, contexts, n_read, sink, settings),
+        task = asyncio.get_running_loop().create_task(self._eval_job(sid, mid, question(), answer, contexts, n_read, sink, settings, gates),
                                                       name=f"eval-{mid[:8]}")
         self._eval_tasks[mid] = task
 
@@ -1041,7 +1279,29 @@ class ReportLensService:
         return task
 
     async def _eval_job(self, sid: str, mid: str, question: Awaitable[str], answer: str, contexts: list[ContextPage], n_read: int,
-                        sink: Optional[asyncio.Queue], settings: Optional[Settings] = None) -> EvalScores:
+                        sink: Optional[asyncio.Queue], settings: Optional[Settings] = None,
+                        gates: Optional[_Gates] = None) -> EvalScores:
+        if gates is None:
+            return await self._score(sid, mid, question, answer, contexts, n_read, sink, settings)
+        try:
+            await gates.evaluation.acquire()           # waits in the queue as 'pending': the row says 'running' only once it is scored
+        except asyncio.CancelledError:
+            self._store_eval(sid, mid, EvalScores(status="failed", errors={"evaluation": "Scoring was interrupted. Run it again."}, n_contexts_input=n_read))
+            if sink is not None:
+                sink.put_nowait(None)
+            raise
+        try:
+            return await self._score(sid, mid, question, answer, contexts, n_read, sink, settings,
+                                     more_coming=lambda: gates.unfinished > 1)       # others (besides this one) are still on their way
+        finally:
+            gates.evaluation.release()
+
+    async def _score(self, sid: str, mid: str, question: Awaitable[str], answer: str, contexts: list[ContextPage], n_read: int,
+                     sink: Optional[asyncio.Queue], settings: Optional[Settings] = None, *,
+                     more_coming: Optional[Callable[[], bool]] = None) -> EvalScores:
+        """Score one answer.  `more_coming` (it belongs to a set of questions; says whether other answers are still on their way): an
+        evaluator that can keep its scoring child alive for the next answer (`ChildEvaluator`) is asked to, so the library import is paid
+        once per set instead of once per answer."""
         own = settings is not None and settings is not self._settings and not self._evaluator_injected
         evaluator: Any = None
         def on_metric(metric: str, value: Optional[float], error: Optional[str]) -> None:
@@ -1053,7 +1313,8 @@ class ReportLensService:
             # The first call imports RAGAS (seconds, or tens of seconds on a 0.1 CPU host): never on the event loop, or every
             # stream would stop pinging and every request would stall meanwhile.
             evaluator = await asyncio.to_thread(self._new_evaluator, settings) if own else await asyncio.to_thread(self._get_evaluator)
-            scores = await evaluator.evaluate(await question, answer, contexts, on_metric=on_metric)
+            warm = {"keep_warm": more_coming} if more_coming and not own and "keep_warm" in inspect.signature(evaluator.evaluate).parameters else {}
+            scores = await evaluator.evaluate(await question, answer, contexts, on_metric=on_metric, **warm)
             scores = scores.model_copy(update={"n_contexts_input": n_read})
         except asyncio.CancelledError:
             # Shutdown: leave an honest record (synchronously: awaiting again could be cancelled again) and release the stream.
@@ -1127,7 +1388,7 @@ class ReportLensService:
     async def aclose(self) -> None:
         """Stop what this service started: running questions, scoring tasks, the evaluator's HTTP client and open PDFs.  The
         store and the indexer belong to the caller."""
-        runs = list(self._runs.values())
+        runs = [r for top in list(self._runs.values()) for r in (top, *top.children)]
         for run in runs:
             run.cancel.set()
         tasks = list(self._eval_tasks.values())

@@ -23,7 +23,7 @@ const FINAL = new Set(["answered", "no_sources"]);
  * @property {() => string} docName
  * @property {object} metrics            GET /api/config -> metrics
  * @property {(mid: string, n: number) => boolean} isActiveCite
- * @property {(page: number) => void} onOpenPage
+ * @property {(page: number, msg: object) => void} onOpenPage
  * @property {(msg: object) => void} onRetry
  * @property {(msg: object) => void} onRerunEval
  */
@@ -99,7 +99,7 @@ export class AssistantMessageView {
           this.stepsCollapsed = !this.stepsCollapsed;
           this.render();
         },
-        onOpenPage: (page) => this.env.onOpenPage(page),
+        onOpenPage: (page) => this.env.onOpenPage(page, this.msg),
       }),
     );
   }
@@ -108,9 +108,13 @@ export class AssistantMessageView {
     const { msg } = this;
     const streaming = ui.streaming && msg.status === "streaming";
     if (streaming && !msg.content && !msg.steps.length) {
-      if (this.sigs.body !== "skeleton") {
-        this.sigs.body = "skeleton";
-        this.bodyEl.replaceChildren(h("div", { class: "answer-skeleton", "aria-hidden": "true" }, h("div", { class: "skeleton" }), h("div", { class: "skeleton" }), h("div", { class: "skeleton" })));
+      const sig = ui.queued ? "queued" : "skeleton";
+      if (this.sigs.body !== sig) {
+        this.sigs.body = sig;
+        this.bodyEl.replaceChildren(
+          h("div", { class: "answer-skeleton", "aria-hidden": "true" }, h("div", { class: "skeleton" }), h("div", { class: "skeleton" }), h("div", { class: "skeleton" })),
+          ui.queued ? h("p", { class: "answer-queued", text: "Waiting for a free slot..." }) : null,
+        );
       }
       return;
     }
@@ -157,7 +161,7 @@ export class AssistantMessageView {
             this.sourcesOpen = !this.sourcesOpen;
             this.render();
           },
-          onOpenPage: (page) => this.env.onOpenPage(page),
+          onOpenPage: (page) => this.env.onOpenPage(page, this.msg),
         })
       : null;
     this.sourcesEl.replaceChildren(...(el ? [el] : []));

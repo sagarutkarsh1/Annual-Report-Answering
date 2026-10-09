@@ -5,7 +5,7 @@ import { humanMessage } from "./api.js";
 
 /** Client-only fields live under `_ui` so they never collide with the server's Message shape. */
 export function uiState(msg) {
-  if (!msg._ui) msg._ui = { streaming: false, eval: { running: false, startedAt: 0, nContexts: 0 } };
+  if (!msg._ui) msg._ui = { streaming: false, queued: false, eval: { running: false, startedAt: 0, nContexts: 0 } };
   return msg._ui;
 }
 
@@ -37,6 +37,25 @@ export function newAssistantMessage(sessionId) {
   return msg;
 }
 
+/**
+ * One item of a `batch_start` event -> the user bubble and the assistant placeholder it stands for.
+ * The placeholder is "queued" (waiting for a free slot) until its first event arrives.
+ * @param {{index: number, question: string, user_message?: object|string, message_id: string}} item
+ */
+export function batchPair(sessionId, item) {
+  const given = item.user_message;
+  const userMsg = newUserMessage(sessionId, item.question);
+  if (given && typeof given === "object") Object.assign(userMsg, given);
+  else if (typeof given === "string" && given) userMsg.id = given;
+  else userMsg.id = `tmp-u-${item.index}-${Date.now()}`;
+  if (!userMsg.content) userMsg.content = item.question;
+  const msg = newAssistantMessage(sessionId);
+  msg.id = item.message_id;
+  msg.created_at = userMsg.created_at || msg.created_at;
+  uiState(msg).queued = true;
+  return { userMsg, msg };
+}
+
 const upsertBy = (list, item, key = "id") => {
   const i = list.findIndex((x) => x[key] === item[key]);
   if (i >= 0) list[i] = { ...list[i], ...item };
@@ -52,6 +71,7 @@ const answerFinished = (msg) => msg.status === "answered" || msg.status === "no_
  */
 export function applyStreamEvent(msg, userMsg, name, data) {
   const ui = uiState(msg);
+  ui.queued = false; // a batch placeholder leaves the queue with its first event
   switch (name) {
     case "message_start":
       if (data.user_message) Object.assign(userMsg, data.user_message);
@@ -117,6 +137,7 @@ export function applyStreamEvent(msg, userMsg, name, data) {
 export function finalizeStream(msg, { aborted }) {
   const ui = uiState(msg);
   ui.streaming = false;
+  ui.queued = false;
   for (const step of msg.steps) if (step.status === "running") step.status = "done";
   if (msg.status === "streaming") {
     msg.status = "error";

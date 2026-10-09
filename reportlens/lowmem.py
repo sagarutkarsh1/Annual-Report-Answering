@@ -23,6 +23,8 @@ log = logging.getLogger("reportlens.lowmem")
 # One heavy child process at a time (an indexing job OR a scoring run): both together would not fit 512 MB.  Taken by
 # `IndexService._index_in_child` and `eval_child.ChildEvaluator`; in-process work never touches it.
 HEAVY_JOB_LOCK = threading.Lock()
+# Set while an indexing child runs (it needs ~280 MB): the question set then answers one question at a time.
+INDEXING_ACTIVE = threading.Event()
 
 
 class _DatasetStandIn:

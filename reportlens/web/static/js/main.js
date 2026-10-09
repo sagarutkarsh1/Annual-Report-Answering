@@ -8,6 +8,7 @@ import { h } from "./dom.js";
 import { initFloating } from "./hovercard.js";
 import { icon } from "./icons.js";
 import { promptLogin } from "./login.js";
+import { configMax } from "./questionset.js";
 import { initLayout } from "./layout.js";
 import { llmSummary, openLLMDialog } from "./llm.js";
 import { closePanel, dropSessionCache, initPanel, panelState } from "./panel.js";
@@ -82,7 +83,8 @@ function openDemo() {
 /** "Ask your own question about this report": a chat of one's own with the demo's document, already indexed (no cost). */
 async function askAboutDemo() {
   if (state.demoOnly) return signIn();
-  return createAndOpen(state.demo?.session_id);
+  // A static demo has no document to copy: "ask your own" means a blank chat to upload a report into.
+  return createAndOpen(state.demo?.has_document === false ? undefined : state.demo?.session_id);
 }
 
 /** From the demo: show the access-code screen again; a valid code reloads into the full app. */
@@ -363,14 +365,14 @@ async function boot() {
   }
   try {
     if (state.demoOnly) {
-      const config = await api.config();
-      setLimits({ maxUploadMb: config.max_upload_mb, maxPages: config.max_pages, publicMode: !!config.public_mode });
+      const config = await loadConfig();
+      applyLimits(config);
       setState({ config, sessions: [] });
     } else {
-      const [config, health, sessions] = await Promise.all([api.config(), api.health().catch(() => null), api.listSessions()]);
-      setLimits({ maxUploadMb: config.max_upload_mb, maxPages: config.max_pages, publicMode: !!config.public_mode });
+      const [config, health, sessions] = await Promise.all([loadConfig(), api.health().catch(() => null), api.listSessions()]);
+      applyLimits(config);
       setState({ config, health, sessions });
-      setState({ llm: config.llm?.visitor_keys === "off" ? null : llmSummary() });
+      setState({ llm: config?.llm?.visitor_keys === "off" ? null : llmSummary() });
     }
   } catch (err) {
     return showBootError(err);
@@ -382,6 +384,21 @@ async function boot() {
   } finally {
     $("boot").remove();
   }
+}
+
+/** GET /api/config is not essential to start: without it the UI uses its built-in defaults (questions, limits). */
+async function loadConfig() {
+  try {
+    return await api.config();
+  } catch (err) {
+    console.warn("GET /api/config failed; continuing with built-in defaults", err);
+    return null;
+  }
+}
+
+function applyLimits(config) {
+  if (!config) return;
+  setLimits({ maxUploadMb: config.max_upload_mb, maxPages: config.max_pages, publicMode: !!config.public_mode, maxBatch: configMax(config) });
 }
 
 function showBootError(err) {

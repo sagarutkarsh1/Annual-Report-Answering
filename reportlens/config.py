@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from typing import Optional
@@ -10,6 +11,7 @@ from typing import Optional
 from dotenv import dotenv_values
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PACKAGED_DEMO_DIR = Path(__file__).resolve().parent / "demo_data"      # the static demo chat that ships with the code
 
 
 def _bool(v: Optional[str], default: bool) -> bool:
@@ -49,6 +51,31 @@ def detect_memory_limit_bytes(files: tuple[str, ...] = _CGROUP_LIMIT_FILES) -> O
         if raw.isdigit() and 0 < int(raw) < _NO_LIMIT:
             return int(raw)
     return None
+
+
+# The question set offered right after an upload (the UI lets each visitor add, remove and edit questions; the owner replaces the
+# built-in set with DEFAULT_QUESTIONS, items separated by a line break or by "||").
+DEFAULT_QUESTIONS: tuple[str, ...] = (
+    "What is the status of GHG reduction technology available to the company?",
+    "Has the company undertaken or announced / earmarked capex to meet its transition plans in the next 5 years?",
+    "To the best of your knowledge how prepared is the company for acute and chronic physical risk events through adaptation "
+    "and resiliency measures on its business?",
+    "What are Primary Sources for operating cash flows ?",
+    "What is Management Outlook ?",
+)
+MAX_BATCH_QUESTIONS_CAP = 50                      # whatever MAX_BATCH_QUESTIONS says
+BATCH_CONCURRENCY_MAX = 6
+
+
+def _questions(v: Optional[str]) -> tuple[str, ...]:
+    """'q1 || q2' or one question per line -> ('q1', 'q2'); blanks and exact duplicates dropped; unset or empty -> the built-in set.
+    (A literal backslash-n typed into a one-line environment variable counts as a line break too.)"""
+    items: list[str] = []
+    for part in re.split(r"\r?\n|\|\||\\n", v or ""):
+        q = part.strip()
+        if q and q.casefold() not in {i.casefold() for i in items}:
+            items.append(q)
+    return tuple(items) or DEFAULT_QUESTIONS
 
 
 def _hosts(v: Optional[str]) -> tuple[str, ...]:
@@ -91,7 +118,11 @@ class Settings:
     max_upload_mb: int = 100
     max_pages: int = 1200
     history_turns: int = 6
+    default_questions: tuple[str, ...] = DEFAULT_QUESTIONS   # the editable question set shown after an upload
+    max_batch_questions: int = 10                 # MAX_BATCH_QUESTIONS: questions one "Run all" (POST .../batch) may carry
+    batch_concurrency: int = 3                    # BATCH_CONCURRENCY: agent runs of a batch in flight at once (2 when low_memory; 1..6)
     demo_mock: bool = False                       # start devtools.mock_openai in-process and point OpenAI traffic at it
+    demo_mock_delay_ms: int = 0                   # REPORTLENS_MOCK_DELAY_MS: make the mock model slow like a real one (timing tests, scripts/render_limits_test.py)
     # --- Public deployment (all off / unlimited by default = the local single-user behaviour) ---
     access_code: Optional[str] = None             # set = every /api route except health/auth/login needs the login cookie
     session_secret: Optional[str] = None          # extra HMAC key material for the login cookie (empty = random per process)
@@ -148,6 +179,9 @@ class Settings:
             "judge_model": self.judge_model,
             "embedding_model": self.embedding_model,
             "max_upload_mb": self.max_upload_mb,
+            "default_questions": list(self.default_questions),
+            "max_batch_questions": self.max_batch_questions,
+            "batch_concurrency": self.batch_concurrency,
             "max_pages": self.max_pages,
             "openai_configured": self.openai_configured,
             "llm_provider": self.llm_provider,
@@ -172,8 +206,9 @@ def settings_from_json(text: str) -> Settings:
     data["data_dir"] = Path(data["data_dir"])
     if data.get("demo_dir"):
         data["demo_dir"] = Path(data["demo_dir"])
-    if "allowed_hosts" in data:
-        data["allowed_hosts"] = tuple(data["allowed_hosts"])
+    for name in ("allowed_hosts", "default_questions"):
+        if name in data:
+            data[name] = tuple(data[name])
     return Settings(**data)
 
 
@@ -190,11 +225,13 @@ def load_settings(env_file: Optional[os.PathLike | str] = None, environ: Optiona
     data_dir = Path(g("REPORTLENS_DATA_DIR") or (PROJECT_ROOT / "data"))
     if not data_dir.is_absolute():
         data_dir = (PROJECT_ROOT / data_dir).resolve()
-    # DEMO_DIR: unset = demo/ in the project when it holds a demo (tests pass `environ` and never pick one up by accident);
-    # an empty value switches the demo off.
+    # DEMO_DIR: unset = demo/ in the project when it holds a demo (a full one, with the PDF), else the static demo packaged
+    # with the code (reportlens/demo_data); tests pass `environ` and never pick one up by accident.  Empty = no demo.
     raw_demo = g("DEMO_DIR")
     if raw_demo is None:
-        demo_dir: Optional[Path] = PROJECT_ROOT / "demo" if environ is None else None
+        demo_dir: Optional[Path] = None
+        if environ is None:
+            demo_dir = next((d for d in (PROJECT_ROOT / "demo", PACKAGED_DEMO_DIR) if (d / "chat.json").is_file()), None)
     else:
         demo_dir = Path(raw_demo.strip()) if raw_demo.strip() else None
         if demo_dir is not None and not demo_dir.is_absolute():
@@ -256,7 +293,11 @@ def load_settings(env_file: Optional[os.PathLike | str] = None, environ: Optiona
         max_upload_mb=public_default("MAX_UPLOAD_MB", _int, 25, 100),
         max_pages=public_default("MAX_PAGES", _int, 400, 1200),
         history_turns=_int(g("HISTORY_TURNS"), 6),
+        default_questions=_questions(g("DEFAULT_QUESTIONS")),
+        max_batch_questions=max(1, min(MAX_BATCH_QUESTIONS_CAP, _int(g("MAX_BATCH_QUESTIONS"), 10))),
+        batch_concurrency=max(1, min(BATCH_CONCURRENCY_MAX, tiered("BATCH_CONCURRENCY", _int, 3, 3, 2))),
         demo_mock=_bool(g("REPORTLENS_DEMO_MOCK"), False),
+        demo_mock_delay_ms=max(0, min(5000, _int(g("REPORTLENS_MOCK_DELAY_MS"), 0))),
         access_code=access_code,
         session_secret=(g("SESSION_SECRET") or "").strip() or None,
         public_mode=public,

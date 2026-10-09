@@ -81,6 +81,7 @@ class ServiceAPI(Protocol):
     def document_outline(self, sid: str) -> list[dict]: ...
     def locate(self, sid: str, page: int, quote: Optional[str], claim: Optional[str]) -> LocateResponse: ...
     def ask(self, sid: str, content: str, llm: Optional[Settings] = None) -> AsyncIterator[tuple[str, dict]]: ...
+    def ask_batch(self, sid: str, questions: list[str], llm: Optional[Settings] = None) -> AsyncIterator[tuple[str, dict]]: ...
     def get_message(self, sid: str, mid: str) -> Message: ...
     async def evaluate_message(self, sid: str, mid: str, llm: Optional[Settings] = None) -> EvalScores: ...
     def health(self) -> dict: ...
@@ -181,6 +182,12 @@ class LoginBody(BaseModel):
 
 class AskBody(BaseModel):
     content: str = Field(max_length=100_000, description="The question (up to 4000 characters)")
+
+
+class BatchBody(BaseModel):
+    questions: list[Annotated[str, Field(max_length=100_000)]] = Field(
+        max_length=500, description="The questions to answer, independently of each other. Blanks and exact duplicates are dropped; "
+                                    "at most MAX_BATCH_QUESTIONS remain (GET /api/config: max_batch_questions), each up to 4000 characters.")
 
 
 class AskJsonBody(AskBody):
@@ -544,6 +551,36 @@ async def ask(sid: SessionId, body: AskBody, request: Request, service: Service,
         first = None
     except ServiceError:
         request.app.state.question_limiter.refund(ip)         # refused before it cost anything: it does not use up the hour's allowance
+        raise
+    return EventStreamResponse(events, first=first)
+
+
+@router.post("/api/sessions/{sid}/batch", tags=["Questions"],
+             summary="Answer a set of questions in parallel: one event stream for all of them")
+async def ask_batch(sid: SessionId, body: BatchBody, request: Request, service: Service, settings: AppSettings,
+                    llm: VisitorLLM) -> EventStreamResponse:
+    """Run every question of the set (independent of each other and of the chat so far) with `batch_concurrency` agent runs at
+    a time.  The stream is `POST .../messages`' with every per-question event carrying its 0-based `index` too, framed by
+    `batch_start` (all questions and their message ids; the rows already exist, in order) and `batch_done` (`answered`, `failed`);
+    `done` comes last, once every answer has been scored or skipped.  Refusals (400 empty_question / too_many_questions,
+    404, 402, 409 session_busy / document_not_ready, 403 demo_read_only, 429 rate_limited) are JSON before the stream starts.
+    The set costs one question per item against the hourly allowance (QUESTIONS_PER_HOUR_PER_IP): too few left = the whole set is refused."""
+    from reportlens.service import clean_questions         # not at import time: the service pulls in the PDF stack, which loads after the port is open
+
+    questions = clean_questions(body.questions, settings.max_batch_questions)       # 400 before anything is counted
+    ip = client_ip(request.scope, settings)
+    limiter = request.app.state.question_limiter
+    wait = limiter.hit_many(ip, len(questions))
+    if wait:
+        raise RateLimited("rate_limited", f"This set has {len(questions)} questions and you may ask {settings.questions_per_hour_per_ip} "
+                                          f"per hour in total. Please try again in {_wait_text(wait)}.", wait)
+    events = service.ask_batch(sid, questions, llm) if llm is not None else service.ask_batch(sid, questions)
+    try:
+        first: Optional[tuple[str, Any]] = await events.__anext__()
+    except StopAsyncIteration:
+        first = None
+    except ServiceError:
+        limiter.refund_many(ip, len(questions))             # refused before it cost anything
         raise
     return EventStreamResponse(events, first=first)
 

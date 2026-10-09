@@ -14,7 +14,7 @@ export class ApiError extends Error {
 }
 
 /** Limits from GET /api/config, used to word a few error messages. */
-const limits = { maxUploadMb: 100, maxPages: 1200, publicMode: false };
+const limits = { maxUploadMb: 100, maxPages: 1200, publicMode: false, maxBatch: 10 };
 export function setLimits(next) {
   Object.assign(limits, next);
 }
@@ -59,6 +59,7 @@ const HUMAN = {
   // On a free public host the whole server sleeps after ~15 idle minutes and comes back empty: say so instead of "no longer exists".
   session_not_found: () => (limits.publicMode ? "The demo restarted (free hosting sleeps). Please start a new chat and upload again." : "That chat no longer exists."),
   empty_question: () => "Type a question first.",
+  too_many_questions: () => `You can run at most ${limits.maxBatch} questions at once.`,
   cancelled: () => "Stopped before the answer was finished.",
   network: () => `Cannot reach the ${APP_NAME} server. Check that it is still running.`,
   demo_read_only: () => "The demo chat is read-only. Sign in and start your own chat to ask questions.",
@@ -131,6 +132,7 @@ export const api = {
   checkLLM: (choice) => request("POST", "/api/llm/check", { llm: choice }),
   documentFileUrl: (sid) => `/api/sessions/${enc(sid)}/document/file`,
   messagesUrl: (sid) => `/api/sessions/${enc(sid)}/messages`,
+  batchUrl: (sid) => `/api/sessions/${enc(sid)}/batch`,
 };
 
 /**

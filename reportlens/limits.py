@@ -209,6 +209,31 @@ class SlidingWindowLimiter:
             self._sweep(now)
             return 0
 
+    def hit_many(self, key: str, n: int) -> int:
+        """Record `n` events at once, all or nothing (a batch of questions).  Returns 0 when all `n` fit, otherwise the seconds
+        until they would (nothing is recorded).  A batch larger than the whole allowance never fits: it waits a full window."""
+        if self.limit <= 0 or n <= 0:
+            return 0
+        with self._lock:
+            now = self._clock()
+            q = self._prune(key, now)
+            free = self.limit - len(q)
+            if n <= free:
+                q.extend([now] * n)
+                self._sweep(now)
+                return 0
+            if n > self.limit:
+                return max(1, math.ceil(self.window_s))
+            must_leave = n - free                          # this many of the oldest events have to leave the window first
+            return max(1, math.ceil(self.window_s - (now - q[must_leave - 1])))
+
+    def refund_many(self, key: str, n: int) -> None:
+        """Take back the `n` most recent events of `key`."""
+        with self._lock:
+            q = self._events.get(key)
+            for _ in range(min(n, len(q) if q else 0)):
+                q.pop()
+
     def record(self, key: str) -> None:
         """Record an event unconditionally (used for failed logins)."""
         if self.limit <= 0:

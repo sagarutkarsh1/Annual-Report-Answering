@@ -12,9 +12,11 @@ import { icon, logoMark } from "./icons.js";
 import { renderUserMessage, AssistantMessageView } from "./message.js";
 import { markersToReferences, tableToTsv } from "./markdown.js";
 import { openCitation, openPage } from "./panel.js";
+import { BatchBar, QuestionSet, configDefaults, configMax } from "./questionset.js";
 import { postSSE } from "./sse.js";
 import { state } from "./state.js";
-import { applyStreamEvent, finalizeStream, newAssistantMessage, newUserMessage, uiState } from "./stream.js";
+import { isStaticDemo } from "./sourcecard.js";
+import { applyStreamEvent, batchPair, finalizeStream, newAssistantMessage, newUserMessage, uiState } from "./stream.js";
 import { announce, showError, toast } from "./toast.js";
 import { IndexingCard, UploadCard, failedHeading, validateFile } from "./upload.js";
 import { METRIC_KEYS } from "./scores.js";
@@ -33,7 +35,10 @@ class AutoScroll {
     this.scrollEl = scrollEl;
     this.fab = fab;
     this.stick = true;
+    this.hold = false; // a question set is streaming in: stay where the reader is instead of following the bottom
+    this.inputAt = 0;
     scrollEl.addEventListener("scroll", () => this.onScroll(), { passive: true });
+    for (const type of ["wheel", "touchstart", "pointerdown", "keydown"]) scrollEl.addEventListener(type, () => (this.inputAt = Date.now()), { passive: true });
     fab.addEventListener("click", () => this.toBottom(true));
   }
 
@@ -44,17 +49,36 @@ class AutoScroll {
 
   onScroll() {
     const d = this.distance();
+    if (this.hold) {
+      // Programmatic scrolling and layout growth never release the hold; the reader scrolling does.
+      if (Date.now() - this.inputAt > 500 || this.scrollEl.scrollTop <= 0) {
+        this.fab.hidden = d < STICK_PX * 1.5;
+        return;
+      }
+      this.hold = false;
+    }
     this.stick = d < STICK_PX;
     this.fab.hidden = d < STICK_PX * 1.5;
   }
 
   /** Called after content grew. */
   follow() {
-    if (this.stick) this.scrollEl.scrollTop = this.scrollEl.scrollHeight;
+    if (this.hold) this.onScroll();
+    else if (this.stick) this.scrollEl.scrollTop = this.scrollEl.scrollHeight;
     else this.onScroll();
   }
 
+  /** Keeps `el` (the first question of a set) at the top of the view while the answers stream in. */
+  holdAt(el) {
+    this.hold = true;
+    this.stick = false;
+    const top = el.getBoundingClientRect().top - this.scrollEl.getBoundingClientRect().top + this.scrollEl.scrollTop;
+    this.scrollEl.scrollTop = Math.max(0, top - 8);
+    this.onScroll();
+  }
+
   toBottom(smooth = false) {
+    this.hold = false;
     this.stick = true;
     this.scrollEl.scrollTo({ top: this.scrollEl.scrollHeight, behavior: smooth && !prefersReducedMotion() ? "smooth" : "auto" });
     this.fab.hidden = true;
@@ -86,7 +110,7 @@ export class ChatPane {
       },
       isActiveCite: (mid, n) => this.activeCite?.mid === mid && this.activeCite?.n === n,
       readOnly: () => !!this.detail?.read_only,
-      onOpenPage: (page) => this.openDocPage(page),
+      onOpenPage: (page, msg) => this.openDocPage(page, msg),
       onRetry: (msg) => this.retry(msg),
       onRerunEval: (msg) => this.rerunEval(msg),
     };
@@ -101,6 +125,7 @@ export class ChatPane {
     this.demoBadge = h("span", { class: "badge badge--demo-chat", text: "Demo", hidden: true, "data-tip": "A real chat, shown read-only" });
     this.header = h("header", { class: "chat-header" }, this.menuBtn, h("h1", { class: "sr-only", text: APP_NAME }), this.titleEl, this.demoBadge, this.exportBtn);
     this.banner = h("div", { class: "banner", role: "status", hidden: true });
+    this.batchBar = new BatchBar();
     this.col = h("div", { class: "col", id: "col" });
     this.scrollEl = h("div", { class: "scroll", id: "scroll" }, this.col);
     this.fab = h("button", { type: "button", class: "fab", hidden: true, "aria-label": "Scroll to latest message", html: icon("arrow-down") });
@@ -112,7 +137,7 @@ export class ChatPane {
     });
     this.dropOverlay = h("div", { class: "drop-overlay", hidden: true, "aria-hidden": "true" }, h("div", { class: "drop-overlay__box" }, h("span", { html: icon("file-up", { size: 28 }) }), h("strong", { text: "Drop your PDF to upload" })));
     this.demoBar = h("section", { class: "demo-bar", hidden: true, "aria-label": "About this demo" });
-    this.root.append(this.header, this.banner, this.scrollEl, h("div", { class: "composer-wrap" }, this.fab, this.composer.el, this.demoBar), this.dropOverlay);
+    this.root.append(this.header, this.banner, this.batchBar.el, this.scrollEl, h("div", { class: "composer-wrap" }, this.fab, this.composer.el, this.demoBar), this.dropOverlay);
     this.scroller = new AutoScroll(this.scrollEl, this.fab);
     // Content growth (streaming, late layout) keeps following the bottom only while the user has not scrolled away.
     new ResizeObserver(() => this.scroller.follow()).observe(this.col);
@@ -155,15 +180,19 @@ export class ChatPane {
   /** Shows `detail`. Cheap to call repeatedly (the indexing poller does, once a second). */
   render(detail) {
     const sameSession = this.detail?.id === detail.id;
-    if (!sameSession) this.composer.setValue(this.drafts.get(detail.id) || "");
+    if (!sameSession) {
+      this.composer.setValue(this.drafts.get(detail.id) || "");
+      this.batchBar.hide();
+    }
     this.detail = detail;
     const group = detail.state === "ready" || detail.state === "locked" ? "chat" : detail.state;
     const remount = !sameSession || group !== this.group;
     if (remount) this.mount(group);
     else if (group === "indexing") this.indexing.update(detail);
-    else if (group === "chat") this.syncHero();
+    else if (group === "chat") this.syncEmptyState();
     this.updateHeader();
     this.updateComposer();
+    if (group === "chat" && (remount || !sameSession)) this.updateBatchBar();
     document.title = `${detail.title && detail.title !== "New chat" ? detail.title : detail.document?.filename || "New chat"} · ${APP_NAME}`;
     if (group === "chat" && remount && !detail.read_only) this.composer.focus();
   }
@@ -184,6 +213,8 @@ export class ChatPane {
     this.pollers.clear();
     this.indexing?.destroy();
     this.indexing = null;
+    this.qset?.destroy();
+    this.qset = null;
     this.uploadCard = null;
     this.listEl = null;
     this.hero = null;
@@ -211,11 +242,16 @@ export class ChatPane {
       this.listEl = h("div", { class: "messages", role: "log", "aria-live": "off", "aria-label": "Conversation" });
       this.col.append(this.listEl);
       for (const msg of detail.messages) this.addMessage(msg);
-      this.syncHero();
+      this.syncEmptyState();
       for (const msg of detail.messages) this.watch(msg);
     }
     this.scroller.stick = true;
+    this.scroller.hold = false;
     this.scrollEl.scrollTop = this.scrollEl.scrollHeight;
+    if (this.qset) {
+      this.scroller.stick = false; // the question set is read from its top, not from its foot
+      this.scrollEl.scrollTop = 0;
+    }
     this.fab.hidden = true;
   }
 
@@ -263,6 +299,27 @@ export class ChatPane {
     }
   }
 
+  /** The hero and, in a ready chat that has no message yet, the editable question set above the composer. */
+  syncEmptyState() {
+    this.syncHero();
+    this.syncQuestions();
+  }
+
+  syncQuestions() {
+    const d = this.detail;
+    const want = this.group === "chat" && d.state === "ready" && d.messages.length === 0 && !d.read_only;
+    if (want && !this.qset) {
+      this.qset = new QuestionSet({ defaults: configDefaults(state.config), max: configMax(state.config), onRun: (questions) => this.runBatch(questions) });
+      this.col.append(this.qset.el);
+    } else if (!want && this.qset) {
+      this.qset.destroy();
+      this.qset = null;
+    }
+    this.hero?.classList.toggle("hero--set", Boolean(this.qset));
+    this.qset?.setBusy(Boolean(this.batchRun(d.id)));
+    this.qset?.setBlocked(this.blockedReason());
+  }
+
   updateHeader() {
     const d = this.detail;
     const title = d.title && d.title !== "New chat" ? d.title : d.document?.filename || "New chat";
@@ -288,11 +345,17 @@ export class ChatPane {
     this.composer.el.hidden = readOnly;
     this.demoBar.hidden = !readOnly;
     if (readOnly) return this.renderDemoBar();
+    const batch = this.batchRun(d.id);
+    this.composer.setState({ mode: d.state, filename: d.document?.filename || "", streaming: this.isAnswering(d.id), blocked: this.blockedReason(), busy: batch?.phase === "answering" ? "Answering your questions..." : "" });
+    this.qset?.setBlocked(this.blockedReason());
+  }
+
+  /** Why new questions are paused right now ("" = they are not). */
+  blockedReason() {
     const cfg = state.config;
     const own = hasLLM() && cfg?.llm?.visitor_keys !== "off";
     const needKey = cfg?.llm?.visitor_keys === "required" && !own && !cfg?.demo_mock;
-    const blocked = needKey ? "Add your API key under 'Model & API key' to ask" : !own && usageLevel() === "exhausted" ? EXHAUSTED_COMPOSER : "";
-    this.composer.setState({ mode: d.state, filename: d.document?.filename || "", streaming: this.isAnswering(d.id), blocked });
+    return needKey ? "Add your API key under 'Model & API key' to ask" : !own && usageLevel() === "exhausted" ? EXHAUSTED_COMPOSER : "";
   }
 
   /** In place of the composer on the read-only demo: what this is, where the document comes from, and how to try it yourself. */
@@ -301,13 +364,14 @@ export class ChatPane {
     const demo = state.demo || {};
     const answer = d.messages.find((m) => m.role === "assistant" && FINAL.has(m.status));
     const model = answer?.usage?.model;
-    const text = `A real chat with ${d.document?.filename || "an annual report"}${model ? `, answered by ${model}` : ""}, every answer scored live with RAGAS. Click a citation to see the passage highlighted in the PDF.`;
+    const noPdf = isStaticDemo(d.id); // the packaged demo has no PDF: a citation opens the verified quote instead
+    const text = `A real chat with ${d.document?.filename || "an annual report"}${model ? `, answered by ${model}` : ""}, every answer scored live with RAGAS. ${noPdf ? "Click a citation to see the page, section and verified quote behind it." : "Click a citation to see the passage highlighted in the PDF."}`;
     const actions = [];
     if (state.demoOnly) {
       actions.push(h("button", { type: "button", class: "btn btn-primary btn-sm", on: { click: () => this.hooks.onSignIn() } }, h("span", { html: icon("log-in", { size: 14 }) }), h("span", { text: "Sign in to ask your own questions" })));
       if (state.auth?.requestEmail) actions.push(h("a", { class: "btn btn-sm", href: requestCodeHref(state.auth.requestEmail) }, h("span", { html: icon("mail", { size: 14 }) }), h("span", { text: "Request an access code" })));
     } else {
-      actions.push(h("button", { type: "button", class: "btn btn-primary btn-sm", on: { click: () => this.hooks.onAskAboutDemo() } }, h("span", { html: icon("message-square-plus", { size: 14 }) }), h("span", { text: "Ask your own question about this report" })));
+      actions.push(h("button", { type: "button", class: "btn btn-primary btn-sm", on: { click: () => this.hooks.onAskAboutDemo() } }, h("span", { html: icon(noPdf ? "file-up" : "message-square-plus", { size: 14 }) }), h("span", { text: noPdf ? "Upload your own report" : "Ask your own question about this report" })));
     }
     const source = demo.attribution
       ? h("p", { class: "demo-bar__source" }, h("span", { text: `Source: ${demo.attribution} ` }), demo.attribution_url ? h("a", { href: demo.attribution_url, target: "_blank", rel: "noopener noreferrer", html: `Publisher's site ${icon("external-link", { size: 12 })}` }) : null)
@@ -374,7 +438,7 @@ export class ChatPane {
     const run = { sid: detail.id, detail, msg, userMsg, phase: "answering", started: false, abort: new AbortController(), text };
     this.runs.add(run);
     detail.messages.push(userMsg, msg);
-    this.syncHero();
+    this.syncEmptyState();
     this.addMessage(userMsg);
     this.addMessage(msg);
     this.scroller.toBottom(false);
@@ -439,11 +503,158 @@ export class ChatPane {
     }
     showError(data);
     if (show) {
-      this.syncHero();
+      this.syncEmptyState();
       this.composer.restore(run.text);
       this.updateComposer();
     }
     if (data.code === "session_not_found") this.hooks.onSessionGone(detail.id);
+  }
+
+  // ------------------------------------------------------------------ question set (POST /batch)
+  batchRun(sid = this.detail?.id) {
+    return Array.from(this.runs).find((r) => r.kind === "batch" && r.sid === sid) || null;
+  }
+
+  async runBatch(questions) {
+    const detail = this.detail;
+    if (!detail || this.group !== "chat" || detail.messages.length || detail.read_only || !questions?.length) return;
+    if (this.isAnswering(detail.id)) return showError({ code: "session_busy" });
+    const run = { kind: "batch", sid: detail.id, detail, phase: "answering", started: false, abort: new AbortController(), questions, items: [], total: questions.length };
+    this.runs.add(run);
+    this.qset?.setBusy(true);
+    this.updateComposer();
+    this.updateBatchBar();
+
+    const { aborted } = await postSSE(api.batchUrl(detail.id), { questions }, { signal: run.abort.signal, onEvent: (name, data) => this.onBatchEvent(run, name, data) });
+
+    for (const item of run.items) finalizeStream(item.msg, { aborted });
+    if (aborted && run.started) announce("Stopped.");
+    run.phase = "ended";
+    this.runs.delete(run);
+    if (this.detail === detail) {
+      for (const item of run.items) {
+        this.views.get(item.msg)?.flush();
+        this.watch(item.msg);
+      }
+      this.scroller.hold = false;
+      if (!run.started) this.qset?.setBusy(false);
+      this.finishBatchBar(run, aborted);
+      this.updateHeader();
+      this.updateComposer();
+    }
+    this.hooks.onRunFinished(detail.id);
+  }
+
+  onBatchEvent(run, name, data) {
+    const { detail } = run;
+    if (name === "error" && !run.started) return this.failBatchBeforeStart(run, data);
+    if (name === "batch_start") return this.startBatch(run, data);
+    if (name === "batch_done") {
+      run.summary = data;
+      return;
+    }
+    if (name === "done") return;
+    const item = (data.message_id && run.items.find((i) => i.msg.id === data.message_id)) || run.items.find((i) => i.index === data.index);
+    if (!item) {
+      // A failure of the whole run (not of one question): every unanswered question ends with it.
+      if (name === "error") for (const rest of run.items) if (rest.msg.status === "streaming") this.applyItemEvent(run, rest, name, data);
+      return;
+    }
+    this.applyItemEvent(run, item, name, data);
+    if (this.detail === detail) this.updateBatchBar();
+  }
+
+  applyItemEvent(run, item, name, data) {
+    const { msg, userMsg } = item;
+    const { detail } = run;
+    applyStreamEvent(msg, userMsg, name, data);
+    if (name === "answer_done") announce(msg.status === "no_sources" ? `Answer ${item.position} of ${run.total} ready. No sources were cited.` : `Answer ${item.position} of ${run.total} ready.`);
+    else if (name === "error") announce(`Question ${item.position} failed: ${humanMessage(data)}`);
+    const p = this.batchProgress(run);
+    if (p.done >= p.total && run.phase === "answering") {
+      run.phase = "evaluating"; // everything is answered (scoring may still run): the composer is free again
+      if (this.detail === detail) this.updateComposer();
+    }
+    if (this.detail !== detail) return;
+    const view = this.views.get(msg);
+    view?.refresh();
+    if (name === "answer_done" || name === "error" || name === "eval_done") view?.flush();
+    if (name === "eval_done") announce(evalAnnouncement(msg.evaluation));
+  }
+
+  /** `batch_start` arrives first: every question and its answer placeholder appear at once, in order. */
+  startBatch(run, data) {
+    const { detail } = run;
+    const items = Array.isArray(data.items) ? data.items.slice().sort((a, b) => (a.index ?? 0) - (b.index ?? 0)) : [];
+    if (!items.length) return;
+    run.started = true;
+    run.total = items.length;
+    run.concurrency = data.concurrency;
+    detail.state = "locked";
+    detail.message_count = (detail.message_count || 0) + items.length * 2;
+    this.hooks.onSessionPatch(detail.id, { state: "locked", message_count: detail.message_count });
+    items.forEach((raw, i) => {
+      const { userMsg, msg } = batchPair(detail.id, raw);
+      run.items.push({ index: raw.index, position: i + 1, userMsg, msg });
+      detail.messages.push(userMsg, msg);
+    });
+    announce(`Answering ${plural(items.length, "question")}.`);
+    if (this.detail !== detail) return;
+    this.syncEmptyState();
+    for (const item of run.items) {
+      this.addMessage(item.userMsg);
+      this.addMessage(item.msg);
+    }
+    this.scroller.holdAt(this.views.get(run.items[0].userMsg).el);
+    this.updateComposer();
+    this.updateBatchBar();
+  }
+
+  /** The server refused the set before streaming (400/402/404/409/429/503): nothing was saved, the card stays as it was. */
+  failBatchBeforeStart(run, data) {
+    run.phase = "failed";
+    showError(data);
+    if (this.detail === run.detail) {
+      this.qset?.setBusy(false);
+      this.updateComposer();
+    }
+    if (data.code === "session_not_found") this.hooks.onSessionGone(run.sid);
+  }
+
+  batchProgress(run) {
+    let done = 0;
+    let failed = 0;
+    let begun = 0;
+    let scoring = false;
+    for (const { msg } of run.items) {
+      if (!uiState(msg).queued) begun += 1;
+      if (FINAL.has(msg.status)) {
+        done += 1;
+        scoring ||= EVAL_OPEN.has(msg.evaluation?.status);
+      } else if (msg.status === "error") {
+        done += 1;
+        failed += 1;
+      }
+    }
+    return { total: run.total, begun, done, failed, scoring };
+  }
+
+  updateBatchBar() {
+    const run = this.detail && this.batchRun();
+    if (!run) return;
+    const p = this.batchProgress(run);
+    if (!run.started) return this.batchBar.show({ label: "Starting...", value: 0, max: run.total });
+    if (p.done >= p.total) return this.batchBar.show({ label: `${plural(p.total - p.failed, "answer")} ready${p.failed ? ` · ${p.failed} failed` : ""} · scoring...`, value: p.total, max: p.total, tone: p.failed ? "warn" : "run" });
+    this.batchBar.show({ label: `Answering ${p.begun} of ${p.total} · ${p.done} done`, value: p.done, max: p.total });
+  }
+
+  finishBatchBar(run, aborted) {
+    if (!run.started) return this.batchBar.hide();
+    const p = this.batchProgress(run);
+    const answered = p.done - p.failed;
+    const label = aborted ? `Stopped · ${answered} of ${p.total} answered` : p.failed ? `${answered} of ${p.total} answered · ${p.failed} failed` : `All ${p.total} answered`;
+    this.batchBar.show({ label, value: p.total, max: p.total, tone: aborted || p.failed ? "warn" : "ok", autoHide: true });
+    announce(label);
   }
 
   retry(msg) {
@@ -472,11 +683,15 @@ export class ChatPane {
   }
 
   // ------------------------------------------------------------------ messages loaded from the server
+  runOwns(msg) {
+    return Array.from(this.runs).some((r) => r.msg === msg || r.items?.some((i) => i.msg === msg));
+  }
+
   /** Polls a message that is still being produced elsewhere (page reload, dropped stream) until it settles. */
   watch(msg) {
     const needs = () =>
       msg.role === "assistant" &&
-      ![...this.runs].some((r) => r.msg === msg) &&
+      !this.runOwns(msg) &&
       !msg.id.startsWith("tmp-") &&
       (msg.status === "streaming" || (FINAL.has(msg.status) && EVAL_OPEN.has(msg.evaluation?.status)));
     if (!needs() || this.pollers.has(msg)) return;
@@ -517,13 +732,22 @@ export class ChatPane {
     this.opener = opener || null;
     this.activeCite = { mid, n };
     this.refreshChips();
-    openCitation(this.detail.id, cite, this.docMeta());
+    const msg = this.detail.messages.find((m) => m.id === mid);
+    openCitation(this.detail.id, cite, this.docMeta(), { cites: msg?.citations || [], onSelect: (c, i) => this.followCard(mid, c, i) });
   }
 
-  openDocPage(page) {
+  /** `msg`: the answer whose Sources / step link was clicked (without it: any answer of the chat, e.g. the document pill). */
+  openDocPage(page, msg) {
     this.activeCite = null;
     this.refreshChips();
-    openPage(this.detail.id, page, this.docMeta());
+    const cites = msg?.citations?.length ? msg.citations : this.detail.messages.flatMap((m) => m.citations || []);
+    openPage(this.detail.id, page, this.docMeta(), null, { cites, onSelect: (c, i) => msg && this.followCard(msg.id, c, i) });
+  }
+
+  /** The source card stepped to another citation of the answer: light up its chip. */
+  followCard(mid, cite, i) {
+    this.activeCite = { mid, n: cite.index ?? i + 1 };
+    this.refreshChips();
   }
 
   refreshChips() {

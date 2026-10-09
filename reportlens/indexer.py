@@ -742,7 +742,7 @@ class IndexService:
     def _index_in_child(self, job: _Job, settings: Settings, mode: str) -> _Outcome:
         """Same job as `_index_once`, run by `python -m reportlens.indexing_worker` (see that module for why and for the protocol).
         The child's model-call and text-extraction events drive the same progress reporting; cancelling kills the child."""
-        from reportlens.lowmem import HEAVY_JOB_LOCK
+        from reportlens.lowmem import HEAVY_JOB_LOCK, INDEXING_ACTIVE
 
         job.report("extracting_text" if mode == "flash" else "building_tree",
                    _P_EXTRACTING if mode == "flash" else _P_TREE)
@@ -754,8 +754,10 @@ class IndexService:
                     self._on_heavy_job()
                 except Exception:  # noqa: BLE001 - only a memory saver: the job runs either way
                     log.warning("could not free memory before the indexing child", exc_info=True)
+            INDEXING_ACTIVE.set()
             return self._run_child(job, settings, mode)
         finally:
+            INDEXING_ACTIVE.clear()
             HEAVY_JOB_LOCK.release()
 
     def _run_child(self, job: _Job, settings: Settings, mode: str) -> _Outcome:
