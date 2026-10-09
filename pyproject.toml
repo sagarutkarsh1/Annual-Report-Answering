@@ -41,7 +41,7 @@ dev = ["pytest", "pytest-asyncio", "httpx", "reportlab"]
 include = ["reportlens*"]
 
 [tool.setuptools.package-data]
-reportlens = ["web/static/**/*"]
+reportlens = ["web/static/**/*", "demo_data/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

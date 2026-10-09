@@ -1,11 +1,16 @@
 """The built-in, read-only demo chat: a real conversation (questions, cited answers, live scores) that anyone may open
 without an access code, so visitors see what the app does before they ask the owner for a code.
 
-A demo is a folder (``DEMO_DIR``, default ``demo/`` in the project) made by ``scripts/export_demo.py`` from any chat:
+A demo is a folder made by ``scripts/export_demo.py`` from any chat, in one of two shapes:
 
-    chat.json            title, document row, every message with the page texts behind it, attribution of the source
-    files/<doc>.pdf      the PDF the citations point into
-    files/pageindex/     its PageIndex store (tree, page texts): the same files a normal chat has
+    static (default)     chat.json only: title, document row, every question and cited answer with its scores.  No PDF: a
+                         citation opens a card with the page, section and verified quote instead of the viewer.  Small enough
+                         to ship inside the package (``reportlens/demo_data/``), so it reaches every deployment with the code.
+    full (--with-files)  chat.json (plus the page texts behind each answer) and files/<doc>.pdf + files/pageindex/: citations
+                         open the PDF at the highlighted passage.  The PDF is a third-party document: keep it out of public
+                         repositories (``demo/`` in the project is git-ignored for that reason).
+
+``DEMO_DIR`` picks the folder; unset = ``demo/`` in the project when it holds a chat.json, else the packaged static demo.
 
 At start-up `install_demo` copies the files into the data folder under the fixed id `DEMO_SESSION_ID`, owned by
 `store.DEMO_OWNER`.  The web layer lets anyone *read* that chat and nobody change it; the spend budget ignores it.  The
@@ -44,6 +49,7 @@ class DemoInfo:
     questions: int
     attribution: Optional[str] = None
     attribution_url: Optional[str] = None
+    has_document: bool = True             # False: a static demo (no PDF on the server; citations open a source card)
 
     def public(self) -> dict[str, Any]:
         return {"available": True, **asdict(self)}
@@ -57,8 +63,9 @@ def _demo_message_id(old: str) -> str:
 # ------------------------------------------------------------------------------------------------ export
 def export_session(store: Store, settings: Settings, sid: str, out_dir: Path, *, attribution: Optional[str] = None,
                    attribution_url: Optional[str] = None, title: Optional[str] = None,
-                   display_name: Optional[str] = None) -> Path:
-    """Write chat `sid` of `store` / `settings.data_dir` as a demo folder.  Only finished answers are taken."""
+                   display_name: Optional[str] = None, with_files: bool = False) -> Path:
+    """Write chat `sid` of `store` / `settings.data_dir` as a demo folder.  Only finished answers are taken.  `with_files`: the
+    full demo (PDF, PageIndex store, page texts); otherwise the static one (chat.json only)."""
     session = store.get_session(sid)
     if session is None:
         raise LookupError(f"no chat {sid} in {settings.data_dir}")
@@ -68,13 +75,13 @@ def export_session(store: Store, settings: Settings, sid: str, out_dir: Path, *,
     source_dir = settings.session_dir(sid)
     pdf = source_dir / doc.doc_name
     store_dir = source_dir / "pageindex"
-    if not pdf.is_file() or not store_dir.is_dir():
+    if with_files and (not pdf.is_file() or not store_dir.is_dir()):
         raise FileNotFoundError(f"the chat's files are missing under {source_dir}")
     messages = []
     for msg in store.list_messages(sid):
         if msg.role == "assistant" and msg.status not in ("answered", "no_sources"):
             continue
-        contexts = store.get_contexts(msg.id) if msg.role == "assistant" else []
+        contexts = store.get_contexts(msg.id) if msg.role == "assistant" and with_files else []
         messages.append({"message": msg.model_dump(mode="json"), "contexts": [c.model_dump(mode="json") for c in contexts]})
     if not any(m["message"]["role"] == "assistant" for m in messages):
         raise ValueError("that chat has no finished answer to show")
@@ -88,12 +95,14 @@ def export_session(store: Store, settings: Settings, sid: str, out_dir: Path, *,
         "attribution_url": attribution_url,
     }
     out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
     files = out_dir / FILES_DIR
     if files.exists():
         shutil.rmtree(files)
-    files.mkdir(parents=True)
-    shutil.copyfile(pdf, files / doc.doc_name)
-    shutil.copytree(store_dir, files / "pageindex")
+    if with_files:
+        files.mkdir(parents=True)
+        shutil.copyfile(pdf, files / doc.doc_name)
+        shutil.copytree(store_dir, files / "pageindex")
     (out_dir / CHAT_FILE).write_text(json.dumps(chat, indent=1, ensure_ascii=True), encoding="utf-8")
     return out_dir
 
@@ -123,14 +132,14 @@ def _install(folder: Path, settings: Settings, store: Store) -> DemoInfo:
     pi_doc_id = raw_doc.pop("pi_doc_id")
     doc = DocumentInfo.model_validate(raw_doc).model_copy(update={"pi_doc_id": pi_doc_id})
     source = folder / FILES_DIR
-    if not (source / doc.doc_name).is_file() or not (source / "pageindex").is_dir():
-        raise FileNotFoundError(f"{source} must hold {doc.doc_name} and pageindex/")
+    has_document = (source / doc.doc_name).is_file() and (source / "pageindex").is_dir()   # else: a static demo
 
     store.delete_session(DEMO_SESSION_ID)                  # a previous run's copy (local data folders persist)
     dest = settings.session_dir(DEMO_SESSION_ID)
     if dest.exists():
         shutil.rmtree(dest)
-    shutil.copytree(source, dest)
+    if has_document:
+        shutil.copytree(source, dest)
 
     store.create_session(chat.get("title") or doc.filename, owner=DEMO_OWNER, sid=DEMO_SESSION_ID)
     store.put_document(DEMO_SESSION_ID, doc)
@@ -143,6 +152,7 @@ def _install(folder: Path, settings: Settings, store: Store) -> DemoInfo:
         questions += msg.role == "user"
     info = DemoInfo(session_id=DEMO_SESSION_ID, title=chat.get("title") or doc.filename, filename=doc.filename,
                     page_count=doc.page_count, questions=questions, attribution=chat.get("attribution"),
-                    attribution_url=chat.get("attribution_url"))
-    log.info("demo chat installed: %r (%s, %d question(s))", info.title, doc.filename, questions)
+                    attribution_url=chat.get("attribution_url"), has_document=has_document)
+    log.info("demo chat installed: %r (%s, %d question(s), %s)", info.title, doc.filename, questions,
+             "with its PDF" if has_document else "static: no PDF")
     return info

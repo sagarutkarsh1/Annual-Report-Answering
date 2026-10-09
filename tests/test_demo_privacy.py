@@ -38,7 +38,7 @@ async def demo_dir(build_env, tmp_path) -> Path:
     assert payload(events, "answer_done")
     out = tmp_path / "demo"
     export_session(source.store, source.settings, sid, out, title="Demo: Northbridge", attribution="Northbridge plc (c)",
-                   attribution_url="https://example.com/ir")
+                   attribution_url="https://example.com/ir", with_files=True)          # the full demo: PDF, index and page texts
     return out
 
 

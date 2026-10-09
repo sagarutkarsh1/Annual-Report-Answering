@@ -1,0 +1,3911 @@
+{
+ "format": 1,
+ "title": "Demo: National Grid Annual Report 2024/25",
+ "document": {
+  "id": "3e622b9428cf408a95f3820edce9e155",
+  "filename": "National Grid Annual Report 2024-25.pdf",
+  "doc_name": "National_Grid_Annual_Report.pdf",
+  "size_bytes": 7750393,
+  "page_count": 308,
+  "status": "ready",
+  "stage": "ready",
+  "progress": 1.0,
+  "error": null,
+  "title": "National Grid - ARA FY2025",
+  "description": "National Grid\u2019s 2024/25 Annual Report presents its UK and US energy-network strategy, \u00a360 billion investment programme, financial performance, governance, climate transition, risks, remuneration and audited financial statements.",
+  "node_count": 404,
+  "created_at": "2026-10-08T05:00:47Z",
+  "indexed_at": "2026-10-08T05:03:42Z",
+  "index_seconds": 174.5,
+  "key_source": "server",
+  "pi_doc_id": "pi-b88e482e7b1040c0ae39634175ca255f"
+ },
+ "messages": [
+  {
+   "message": {
+    "id": "dc29e84bfe64457c9f58eaf1e203ad9d",
+    "session_id": "0aa01c3630794f759490445de3ffd455",
+    "role": "user",
+    "content": "What are Primary Sources for operating cash flows ?",
+    "status": "answered",
+    "citations": [],
+    "sources": [],
+    "steps": [],
+    "usage": null,
+    "elapsed_ms": null,
+    "evaluation": null,
+    "error": null,
+    "created_at": "2026-10-08T05:03:52Z",
+    "key_source": "server"
+   },
+   "contexts": []
+  },
+  {
+   "message": {
+    "id": "cfeb415ab99543dfa67ec2164e14231e",
+    "session_id": "0aa01c3630794f759490445de3ffd455",
+    "role": "assistant",
+    "content": "## Primary sources of operating cash flow\n\nNational Grid\u2019s operating cash flows primarily arise from customer payments for:\n\n- **Electricity transmission services**, principally regulated UK and US network charges based on customer usage. [[c1]]\n- **Electricity distribution services**, including UK distribution and regulated US electricity services. [[c2]]\n- **US gas supply and distribution**, together with US electricity supply and transmission. [[c3]]\n- **Network-connection and related construction work**, with upfront payments generally deferred and recognised over the connection\u2019s life. [[c4]]\n- **National Grid Ventures**, including interconnector capacity, LNG importation and LIPA electricity-generation capacity and energy services. [[c5]]\n- Smaller sources include **renewables-project and UK commercial-property sales**. [[c6]]\n\nFor the year ended **31 March 2025**, these activities generated **\u00a36,991 million before tax** and **\u00a36,808 million of statutory net operating cash inflow after \u00a3183 million of tax paid**. [[c7]] [[c8]]",
+    "status": "answered",
+    "citations": [
+     {
+      "id": "c1",
+      "index": 1,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 177,
+      "cited_page": 177,
+      "printed_page": "175",
+      "section_path": [
+       "Notes to the consolidated financial statements - analysis of items in the primary statements",
+       "3. Revenue",
+       "Revenue Recognition and UK Electricity Operations"
+      ],
+      "node_id": "0230",
+      "node_range": [
+       177,
+       177
+      ],
+      "quote": "Revenue arises in the course of ordinary activities and principally comprises: \u2022 transmission services; \u2022 distribution services; and \u2022 generation services.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.09284,
+        "y": 0.16874,
+        "w": 0.44961,
+        "h": 0.01169
+       },
+       {
+        "x": 0.09285,
+        "y": 0.18069,
+        "w": 0.14613,
+        "h": 0.01161
+       },
+       {
+        "x": 0.09285,
+        "y": 0.19256,
+        "w": 0.16348,
+        "h": 0.01161
+       },
+       {
+        "x": 0.09285,
+        "y": 0.20443,
+        "w": 0.13372,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Electricity transmission services, principally regulated UK and US network charges based on customer usage."
+     },
+     {
+      "id": "c2",
+      "index": 2,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 177,
+      "cited_page": 177,
+      "printed_page": "175",
+      "section_path": [
+       "Notes to the consolidated financial statements - analysis of items in the primary statements",
+       "3. Revenue",
+       "Revenue Recognition and UK Electricity Operations"
+      ],
+      "node_id": "0230",
+      "node_range": [
+       177,
+       177
+      ],
+      "quote": "electricity distribution \u2013 revenue is recognised based on usage by customers (over time), based upon volumes and price.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.09793,
+        "y": 0.71176,
+        "w": 0.72301,
+        "h": 0.01178
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Electricity distribution services, including UK distribution and regulated US electricity services."
+     },
+     {
+      "id": "c3",
+      "index": 3,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 178,
+      "cited_page": 178,
+      "printed_page": "176",
+      "section_path": [
+       "Notes to the consolidated financial statements - analysis of items in the primary statements",
+       "3. Revenue",
+       "Revenue Recognition Across National Grid Business Segments"
+      ],
+      "node_id": "0232",
+      "node_range": [
+       178,
+       178
+      ],
+      "quote": "electricity and gas supply and distribution and electricity transmission \u2013 revenue is recognised based on usage by customers",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.06948,
+        "y": 0.25424,
+        "w": 0.74901,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "US gas supply and distribution, together with US electricity supply and transmission."
+     },
+     {
+      "id": "c4",
+      "index": 4,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 178,
+      "cited_page": 178,
+      "printed_page": "176",
+      "section_path": [
+       "Notes to the consolidated financial statements - analysis of items in the primary statements",
+       "3. Revenue",
+       "Revenue Recognition Across National Grid Business Segments"
+      ],
+      "node_id": "0232",
+      "node_range": [
+       178,
+       178
+      ],
+      "quote": "construction work (principally for connections) \u2013 revenue is recognised over time as we provide access to our network.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.06948,
+        "y": 0.27782,
+        "w": 0.71098,
+        "h": 0.01178
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Network-connection and related construction work, with upfront payments generally deferred and recognised over the connection\u2019s life."
+     },
+     {
+      "id": "c5",
+      "index": 5,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 178,
+      "cited_page": 178,
+      "printed_page": "176",
+      "section_path": [
+       "Notes to the consolidated financial statements - analysis of items in the primary statements",
+       "3. Revenue",
+       "Revenue Recognition Across National Grid Business Segments"
+      ],
+      "node_id": "0232",
+      "node_range": [
+       178,
+       178
+      ],
+      "quote": "National Grid Ventures generates revenue from electricity interconnectors, LNG at the Isle of Grain in the UK and Providence, Rhode Island in the US,",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.05525,
+        "y": 0.48793,
+        "w": 0.84981,
+        "h": 0.01178
+       },
+       {
+        "x": 0.05525,
+        "y": 0.4998,
+        "w": 0.02514,
+        "h": 0.01178
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "National Grid Ventures, including interconnector capacity, LNG importation and LIPA electricity-generation capacity and energy services."
+     },
+     {
+      "id": "c6",
+      "index": 6,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 178,
+      "cited_page": 178,
+      "printed_page": "176",
+      "section_path": [
+       "Notes to the consolidated financial statements - analysis of items in the primary statements",
+       "3. Revenue",
+       "Revenue Recognition Across National Grid Business Segments"
+      ],
+      "node_id": "0232",
+      "node_range": [
+       178,
+       178
+      ],
+      "quote": "Other revenue in the scope of IFRS 15 principally includes sales of renewables projects",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.05525,
+        "y": 0.62445,
+        "w": 0.51232,
+        "h": 0.01178
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Smaller sources include renewables-project and UK commercial-property sales."
+     },
+     {
+      "id": "c7",
+      "index": 7,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 169,
+      "cited_page": 169,
+      "printed_page": "167",
+      "section_path": [
+       "Consolidated cash flow statement"
+      ],
+      "node_id": "0218",
+      "node_range": [
+       169,
+       170
+      ],
+      "quote": "Cash generated from operations \u2013 continuing operations 6,991 7,281 6,432",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.0881,
+        "y": 0.31137,
+        "w": 0.84935,
+        "h": 0.01068
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "For the year ended 31 March 2025, these activities generated \u00a36,991 million before tax and \u00a36,808 million of statutory net operating cash inflow after \u00a3183 million of tax paid."
+     },
+     {
+      "id": "c8",
+      "index": 8,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 169,
+      "cited_page": 169,
+      "printed_page": "167",
+      "section_path": [
+       "Consolidated cash flow statement"
+      ],
+      "node_id": "0218",
+      "node_range": [
+       169,
+       170
+      ],
+      "quote": "Net cash inflow from operating activities \u2013 continuing operations 6,808 6,939 6,343",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.0881,
+        "y": 0.33822,
+        "w": 0.84935,
+        "h": 0.01054
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "For the year ended 31 March 2025, these activities generated \u00a36,991 million before tax and \u00a36,808 million of statutory net operating cash inflow after \u00a3183 million of tax paid."
+     }
+    ],
+    "sources": [
+     {
+      "page": 169,
+      "printed_page": "167",
+      "refs": 2,
+      "citation_ids": [
+       "c7",
+       "c8"
+      ],
+      "section_path": [
+       "Consolidated cash flow statement"
+      ]
+     },
+     {
+      "page": 177,
+      "printed_page": "175",
+      "refs": 2,
+      "citation_ids": [
+       "c1",
+       "c2"
+      ],
+      "section_path": [
+       "Notes to the consolidated financial statements - analysis of items in the primary statements",
+       "3. Revenue",
+       "Revenue Recognition and UK Electricity Operations"
+      ]
+     },
+     {
+      "page": 178,
+      "printed_page": "176",
+      "refs": 4,
+      "citation_ids": [
+       "c3",
+       "c4",
+       "c5",
+       "c6"
+      ],
+      "section_path": [
+       "Notes to the consolidated financial statements - analysis of items in the primary statements",
+       "3. Revenue",
+       "Revenue Recognition Across National Grid Business Segments"
+      ]
+     }
+    ],
+    "steps": [
+     {
+      "id": "s1",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 2154
+     },
+     {
+      "id": "s2",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 477
+     },
+     {
+      "id": "s3",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 4056
+     },
+     {
+      "id": "s4",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 3
+     },
+     {
+      "id": "s5",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 0
+     },
+     {
+      "id": "s6",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 243
+     },
+     {
+      "id": "s7",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 1
+     },
+     {
+      "id": "s8",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 0
+     },
+     {
+      "id": "s9",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 2873
+     },
+     {
+      "id": "s10",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 414
+     },
+     {
+      "id": "s11",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 4072
+     },
+     {
+      "id": "s12",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read page 169",
+      "pages": [
+       169
+      ],
+      "status": "done",
+      "elapsed_ms": 4
+     },
+     {
+      "id": "s13",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read page 178",
+      "pages": [
+       178
+      ],
+      "status": "done",
+      "elapsed_ms": 0
+     },
+     {
+      "id": "s14",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 203
+     },
+     {
+      "id": "s15",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read page 289",
+      "pages": [
+       289
+      ],
+      "status": "done",
+      "elapsed_ms": 7
+     },
+     {
+      "id": "s16",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 2959
+     },
+     {
+      "id": "s17",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read page 177",
+      "pages": [
+       177
+      ],
+      "status": "done",
+      "elapsed_ms": 237
+     },
+     {
+      "id": "s18",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 5390
+     }
+    ],
+    "usage": {
+     "model": "gpt-5.6-sol",
+     "input_tokens": 390524,
+     "cached_tokens": 291161,
+     "output_tokens": 1377,
+     "reasoning_tokens": 542,
+     "cost_usd": 0.6408014000000001
+    },
+    "elapsed_ms": 31361,
+    "evaluation": {
+     "status": "done",
+     "faithfulness": 0.9286,
+     "answer_relevancy": 0.6428,
+     "context_precision": 0.9167,
+     "errors": {},
+     "context_verdicts": [
+      {
+       "index": 0,
+       "page": 169,
+       "verdict": 1,
+       "reason": "The provided context contains detailed financial data and cash flow figures related to operating activities, which directly support the answer describing the primary sources of operating cash flows. The context includes figures for operating profit, adjustments, and net cash inflows from operating activities, which align with the explanation of sources such as electricity transmission, distributio"
+      },
+      {
+       "index": 1,
+       "page": 178,
+       "verdict": 1,
+       "reason": "The provided context contains detailed information about the various revenue streams and services related to electricity and gas supply, transmission, construction work, and other activities of National Grid, which directly correspond to the primary sources of operating cash flows described in the answer. Therefore, the context was useful in arriving at the given answer."
+      },
+      {
+       "index": 2,
+       "page": 289,
+       "verdict": 0,
+       "reason": "The provided context contains detailed financial data and explanations related to cash flows, funds from operations, and other financial metrics, but it does not explicitly describe or list the primary sources of operating cash flows as given in the answer. The answer includes specific categories of operating cash flow sources such as electricity transmission services, distribution services, gas s"
+      },
+      {
+       "index": 3,
+       "page": 177,
+       "verdict": 1,
+       "reason": "The provided context contains detailed information about the revenue sources and recognition policies related to electricity transmission, distribution, and other services, which directly relate to the primary sources of operating cash flows described in the answer. The answer summarizes these sources based on the context, making the context useful for arriving at the given answer."
+      }
+     ],
+     "n_contexts_input": 4,
+     "n_contexts_scored": 4,
+     "judge_model": "gpt-4.1-mini",
+     "embedding_model": "text-embedding-3-small",
+     "ragas_version": "0.4.3",
+     "latency_s": 10.35,
+     "skipped_reason": null
+    },
+    "error": null,
+    "created_at": "2026-10-08T05:03:52Z",
+    "key_source": "server"
+   },
+   "contexts": []
+  },
+  {
+   "message": {
+    "id": "4e91a6b10d21418ab8fd3cf7780e18d7",
+    "session_id": "0aa01c3630794f759490445de3ffd455",
+    "role": "user",
+    "content": "What is the status of GHG reduction technology available to the company?",
+    "status": "answered",
+    "citations": [],
+    "sources": [],
+    "steps": [],
+    "usage": null,
+    "elapsed_ms": null,
+    "evaluation": null,
+    "error": null,
+    "created_at": "2026-10-08T05:04:52Z",
+    "key_source": "server"
+   },
+   "contexts": []
+  },
+  {
+   "message": {
+    "id": "9abfdb21fb024572a20bd375c9d46edd",
+    "session_id": "0aa01c3630794f759490445de3ffd455",
+    "role": "assistant",
+    "content": "## Status of GHG-reduction technology\n\nNational Grid has **several deployable technologies**, but some critical solutions remain immature or constrained:\n\n- **Currently deployed:** leak-prone gas-pipe replacement, SF\u2086-leak interventions, electric fleet vehicles and dynamic line-rating technology. These measures have reduced controllable Scope 1 emissions; 22% of light-duty vehicles are electric and operational SF\u2086 emissions are 36% below the 2018/19 baseline. [[c1]] [[c2]] [[c3]]\n\n- **Still under development:** alternatives to SF\u2086 are not yet presented as fully commercial or widely available. National Grid is working with partners and received **\u00a38.5 million** from Ofgem to develop a long-term strategy for reducing SF\u2086 dependence. [[c4]]\n\n- **Constrained availability:** fleet electrification depends on EV supply and charging infrastructure. [[c5]]\n\n- **Low-carbon construction technology/materials remain limited and costly:** sustainable substitutes for carbon-intensive steel and concrete are difficult to obtain because of limited availability, higher costs and possible regulatory barriers. [[c6]]\n\n- **Broader innovation is scaling:** National Grid Partners has invested more than **$500 million in over 50 startups**, while dynamic line-rating technology is already operating in New York and Wales to increase transmission efficiency safely. [[c7]] [[c8]]\n\n**Overall:** the company has practical technologies for operational emissions reduction, but major reductions still depend on further technology development, sufficient equipment and low-carbon material supply, charging infrastructure, and supportive policy and regulation. The report explicitly says its emissions plans rely heavily on technical dependencies and policy and regulatory frameworks. [[c9]]",
+    "status": "answered",
+    "citations": [
+     {
+      "id": "c1",
+      "index": 1,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 47,
+      "cited_page": 47,
+      "printed_page": "45",
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment",
+       "Achieve net zero by 2050 for Scope 1, 2 and 3 GHG emissions"
+      ],
+      "node_id": "0046",
+      "node_range": [
+       47,
+       48
+      ],
+      "quote": "Scope 1 emissions where we have greater direct control (i.e. excluding emissions from generation) have fallen from the baseline year.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.0837,
+        "y": 0.53892,
+        "w": 0.25107,
+        "h": 0.01178
+       },
+       {
+        "x": 0.0837,
+        "y": 0.55079,
+        "w": 0.25772,
+        "h": 0.01178
+       },
+       {
+        "x": 0.0837,
+        "y": 0.56266,
+        "w": 0.27179,
+        "h": 0.01178
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Currently deployed: leak-prone gas-pipe replacement, SF\u2086-leak interventions, electric fleet vehicles and dynamic line-rating technology. These measures have reduced controllable Scope 1 emissions; 22% of light-duty vehicles are electric and operational SF\u2086 emissions are 36% below the 2018/19 baseline."
+     },
+     {
+      "id": "c2",
+      "index": 2,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 47,
+      "cited_page": 47,
+      "printed_page": "45",
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment",
+       "Achieve net zero by 2050 for Scope 1, 2 and 3 GHG emissions"
+      ],
+      "node_id": "0046",
+      "node_range": [
+       47,
+       48
+      ],
+      "quote": "22% of our light-duty vehicles are EVs.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.37592,
+        "y": 0.28831,
+        "w": 0.26586,
+        "h": 0.01402
+       },
+       {
+        "x": 0.37592,
+        "y": 0.30265,
+        "w": 0.03787,
+        "h": 0.01392
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Currently deployed: leak-prone gas-pipe replacement, SF\u2086-leak interventions, electric fleet vehicles and dynamic line-rating technology. These measures have reduced controllable Scope 1 emissions; 22% of light-duty vehicles are electric and operational SF\u2086 emissions are 36% below the 2018/19 baseline."
+     },
+     {
+      "id": "c3",
+      "index": 3,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 47,
+      "cited_page": 47,
+      "printed_page": "45",
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment",
+       "Achieve net zero by 2050 for Scope 1, 2 and 3 GHG emissions"
+      ],
+      "node_id": "0046",
+      "node_range": [
+       47,
+       48
+      ],
+      "quote": "We have reduced SF6 emissions from our operations by 36%.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.37592,
+        "y": 0.509,
+        "w": 0.2536,
+        "h": 0.01564
+       },
+       {
+        "x": 0.37592,
+        "y": 0.52335,
+        "w": 0.22614,
+        "h": 0.01402
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Currently deployed: leak-prone gas-pipe replacement, SF\u2086-leak interventions, electric fleet vehicles and dynamic line-rating technology. These measures have reduced controllable Scope 1 emissions; 22% of light-duty vehicles are electric and operational SF\u2086 emissions are 36% below the 2018/19 baseline."
+     },
+     {
+      "id": "c4",
+      "index": 4,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 47,
+      "cited_page": 47,
+      "printed_page": "45",
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment",
+       "Achieve net zero by 2050 for Scope 1, 2 and 3 GHG emissions"
+      ],
+      "node_id": "0046",
+      "node_range": [
+       47,
+       48
+      ],
+      "quote": "We are also continuing our work with partners on innovation projects to develop alternative gases to SF6",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.37592,
+        "y": 0.65286,
+        "w": 0.27185,
+        "h": 0.01161
+       },
+       {
+        "x": 0.37592,
+        "y": 0.66473,
+        "w": 0.26244,
+        "h": 0.01161
+       },
+       {
+        "x": 0.37592,
+        "y": 0.67644,
+        "w": 0.07781,
+        "h": 0.01299
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Still under development: alternatives to SF\u2086 are not yet presented as fully commercial or widely available. National Grid is working with partners and received \u00a38.5 million from Ofgem to develop a long-term strategy for reducing SF\u2086 dependence."
+     },
+     {
+      "id": "c5",
+      "index": 5,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 47,
+      "cited_page": 47,
+      "printed_page": "45",
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment",
+       "Achieve net zero by 2050 for Scope 1, 2 and 3 GHG emissions"
+      ],
+      "node_id": "0046",
+      "node_range": [
+       47,
+       48
+      ],
+      "quote": "this is vulnerable to supply chain disruptions and delays regarding the availability of EVs, as well as the implementation of charging infrastructure.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.56915,
+        "y": 0.44393,
+        "w": 0.03724,
+        "h": 0.01161
+       },
+       {
+        "x": 0.37592,
+        "y": 0.4558,
+        "w": 0.25068,
+        "h": 0.01161
+       },
+       {
+        "x": 0.37592,
+        "y": 0.4676,
+        "w": 0.27499,
+        "h": 0.01169
+       },
+       {
+        "x": 0.37592,
+        "y": 0.47947,
+        "w": 0.20257,
+        "h": 0.01169
+       },
+       {
+        "x": 0.37592,
+        "y": 0.49134,
+        "w": 0.08447,
+        "h": 0.01169
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Constrained availability: fleet electrification depends on EV supply and charging infrastructure."
+     },
+     {
+      "id": "c6",
+      "index": 6,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 47,
+      "cited_page": 47,
+      "printed_page": "45",
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment",
+       "Achieve net zero by 2050 for Scope 1, 2 and 3 GHG emissions"
+      ],
+      "node_id": "0046",
+      "node_range": [
+       47,
+       48
+      ],
+      "quote": "Due to limited availability, higher costs and potential regulatory barriers, it is difficult to source more sustainable alternatives or implement low-carbon construction methods.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.78371,
+        "y": 0.67067,
+        "w": 0.15221,
+        "h": 0.01161
+       },
+       {
+        "x": 0.66814,
+        "y": 0.68254,
+        "w": 0.2686,
+        "h": 0.01161
+       },
+       {
+        "x": 0.66814,
+        "y": 0.69433,
+        "w": 0.2317,
+        "h": 0.01169
+       },
+       {
+        "x": 0.66814,
+        "y": 0.70628,
+        "w": 0.22103,
+        "h": 0.01161
+       },
+       {
+        "x": 0.66814,
+        "y": 0.71815,
+        "w": 0.13527,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Low-carbon construction technology/materials remain limited and costly: sustainable substitutes for carbon-intensive steel and concrete are difficult to obtain because of limited availability, higher costs and possible regulatory barriers."
+     },
+     {
+      "id": "c7",
+      "index": 7,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 75,
+      "cited_page": 75,
+      "printed_page": "73",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "4. Transition Opportunity"
+      ],
+      "node_id": "0086",
+      "node_range": [
+       75,
+       76
+      ],
+      "quote": "National Grid Partners has invested more than $500 million in over 50 startups and strategic funds, with seven successful exits.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.75499,
+        "y": 0.64309,
+        "w": 0.18055,
+        "h": 0.0106
+       },
+       {
+        "x": 0.67671,
+        "y": 0.65262,
+        "w": 0.23575,
+        "h": 0.01116
+       },
+       {
+        "x": 0.67671,
+        "y": 0.66334,
+        "w": 0.22287,
+        "h": 0.01053
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Broader innovation is scaling: National Grid Partners has invested more than $500 million in over 50 startups, while dynamic line-rating technology is already operating in New York and Wales to increase transmission efficiency safely."
+     },
+     {
+      "id": "c8",
+      "index": 8,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 75,
+      "cited_page": 75,
+      "printed_page": "73",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "4. Transition Opportunity"
+      ],
+      "node_id": "0086",
+      "node_range": [
+       75,
+       76
+      ],
+      "quote": "in New York and Wales, we have deployed dynamic line rating (DLR) technology on our transmission lines",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.7452,
+        "y": 0.71979,
+        "w": 0.16805,
+        "h": 0.01046
+       },
+       {
+        "x": 0.67671,
+        "y": 0.72974,
+        "w": 0.25252,
+        "h": 0.0106
+       },
+       {
+        "x": 0.67671,
+        "y": 0.73998,
+        "w": 0.11228,
+        "h": 0.01046
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Broader innovation is scaling: National Grid Partners has invested more than $500 million in over 50 startups, while dynamic line-rating technology is already operating in New York and Wales to increase transmission efficiency safely."
+     },
+     {
+      "id": "c9",
+      "index": 9,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 46,
+      "cited_page": 46,
+      "printed_page": "44",
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment"
+      ],
+      "node_id": "0045",
+      "node_range": [
+       46,
+       47
+      ],
+      "quote": "rely heavily on technical dependencies as well as policy and regulatory frameworks to support our emission reduction plans and targets.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.12845,
+        "y": 0.63422,
+        "w": 0.33981,
+        "h": 0.01392
+       },
+       {
+        "x": 0.05525,
+        "y": 0.64837,
+        "w": 0.37758,
+        "h": 0.01402
+       },
+       {
+        "x": 0.05525,
+        "y": 0.66271,
+        "w": 0.27815,
+        "h": 0.01392
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "The report explicitly says its emissions plans rely heavily on technical dependencies and policy and regulatory frameworks."
+     }
+    ],
+    "sources": [
+     {
+      "page": 46,
+      "printed_page": "44",
+      "refs": 1,
+      "citation_ids": [
+       "c9"
+      ],
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment"
+      ]
+     },
+     {
+      "page": 47,
+      "printed_page": "45",
+      "refs": 6,
+      "citation_ids": [
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6"
+      ],
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment",
+       "Achieve net zero by 2050 for Scope 1, 2 and 3 GHG emissions"
+      ]
+     },
+     {
+      "page": 75,
+      "printed_page": "73",
+      "refs": 2,
+      "citation_ids": [
+       "c7",
+       "c8"
+      ],
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "4. Transition Opportunity"
+      ]
+     }
+    ],
+    "steps": [
+     {
+      "id": "s1",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 1715
+     },
+     {
+      "id": "s2",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 247
+     },
+     {
+      "id": "s3",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 1611
+     },
+     {
+      "id": "s4",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 199
+     },
+     {
+      "id": "s5",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 2968
+     },
+     {
+      "id": "s6",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 46-48",
+      "pages": [
+       46,
+       47,
+       48
+      ],
+      "status": "done",
+      "elapsed_ms": 7
+     },
+     {
+      "id": "s7",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 72-75",
+      "pages": [
+       72,
+       73,
+       74,
+       75
+      ],
+      "status": "done",
+      "elapsed_ms": 677
+     },
+     {
+      "id": "s8",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 77-79",
+      "pages": [
+       77,
+       78,
+       79
+      ],
+      "status": "done",
+      "elapsed_ms": 1
+     },
+     {
+      "id": "s9",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 2434
+     }
+    ],
+    "usage": {
+     "model": "gpt-5.6-sol",
+     "input_tokens": 106107,
+     "cached_tokens": 61865,
+     "output_tokens": 1007,
+     "reasoning_tokens": 135,
+     "cost_usd": 0.266084
+    },
+    "elapsed_ms": 16230,
+    "evaluation": {
+     "status": "done",
+     "faithfulness": 1.0,
+     "answer_relevancy": 0.9225,
+     "context_precision": 0.9283,
+     "errors": {},
+     "context_verdicts": [
+      {
+       "index": 0,
+       "page": 46,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's environmental impact efforts, including their Climate Transition Plan, emission reduction targets, and challenges faced. The answer directly references specific technologies, development status, investments, and dependencies mentioned or implied in the context, showing that the context was essential to formulating the comprehensive st"
+      },
+      {
+       "index": 1,
+       "page": 47,
+       "verdict": 1,
+       "reason": "The context provides detailed information about the current status and progress of greenhouse gas reduction technologies available to National Grid, including deployed technologies, ongoing development projects, constraints, and innovation investments. This information directly supports and aligns with the given answer, which summarizes these points. Therefore, the context was useful in arriving a"
+      },
+      {
+       "index": 2,
+       "page": 48,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's current status and challenges regarding greenhouse gas reduction technologies, including deployed technologies, those under development, constraints, and investments in innovation. This information directly supports and aligns with the given answer, making the context useful in arriving at the answer."
+      },
+      {
+       "index": 3,
+       "page": 72,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's current and developing greenhouse gas reduction technologies, including deployed measures, ongoing development efforts, constraints, and investments in innovation. This information directly supports and aligns with the given answer, which summarizes the status of GHG-reduction technology available to National Grid."
+      },
+      {
+       "index": 4,
+       "page": 73,
+       "verdict": 0,
+       "reason": "The provided context does not explicitly mention the status of greenhouse gas (GHG) reduction technologies available to National Grid. Instead, it focuses on transition risks related to electricity demand growth, regulatory frameworks, investment strategies, and network reliability. The answer, however, details specific GHG reduction technologies, their deployment status, development challenges, a"
+      },
+      {
+       "index": 5,
+       "page": 74,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's challenges, strategies, and current status regarding greenhouse gas reduction technologies, including deployed technologies, those under development, and constraints faced. This information directly supports and explains the answer given about the status of GHG reduction technology available to National Grid."
+      },
+      {
+       "index": 6,
+       "page": 75,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's current and developing greenhouse gas reduction technologies, including deployed solutions like leak-prone gas-pipe replacement, SF6 leak interventions, electric fleet vehicles, and dynamic line-rating technology. It also discusses challenges such as immature alternatives to SF6, constraints on fleet electrification, and limited avail"
+      },
+      {
+       "index": 7,
+       "page": 77,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's current greenhouse gas reduction technologies, including those already deployed, under development, and constrained by supply or cost. It also discusses the company's investments in innovation and the reliance on policy and regulatory frameworks. This information directly supports the answer's summary of the status of GHG reduction te"
+      },
+      {
+       "index": 8,
+       "page": 78,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's GHG emissions footprint and the various sources of emissions, which is essential background. The answer builds on this by specifying the status of GHG-reduction technologies available to National Grid, including currently deployed technologies, those under development, and constraints faced. The context supports understanding the emis"
+      },
+      {
+       "index": 9,
+       "page": 79,
+       "verdict": 1,
+       "reason": "The context provides detailed information on the current status of greenhouse gas reduction technologies available to National Grid, including deployed technologies, those under development, constraints, and innovation investments. This directly supports and informs the given answer about the status of GHG-reduction technology."
+      }
+     ],
+     "n_contexts_input": 10,
+     "n_contexts_scored": 10,
+     "judge_model": "gpt-4.1-mini",
+     "embedding_model": "text-embedding-3-small",
+     "ragas_version": "0.4.3",
+     "latency_s": 15.59,
+     "skipped_reason": null
+    },
+    "error": null,
+    "created_at": "2026-10-08T05:04:52Z",
+    "key_source": "server"
+   },
+   "contexts": []
+  },
+  {
+   "message": {
+    "id": "2403061caa084e1a8a771027969d0146",
+    "session_id": "0aa01c3630794f759490445de3ffd455",
+    "role": "user",
+    "content": "Has the company undertaken or announced / earmarked capex to meet its transition plans in the next 5 years?",
+    "status": "answered",
+    "citations": [],
+    "sources": [],
+    "steps": [],
+    "usage": null,
+    "elapsed_ms": null,
+    "evaluation": null,
+    "error": null,
+    "created_at": "2026-10-08T05:05:24Z",
+    "key_source": "server"
+   },
+   "contexts": []
+  },
+  {
+   "message": {
+    "id": "1d953241796341d1bb5fbfd47824abe6",
+    "session_id": "0aa01c3630794f759490445de3ffd455",
+    "role": "assistant",
+    "content": "## Yes, primarily to enable the energy transition\n\nNational Grid has announced a **five-year capital programme covering April 2024\u2013March 2029**:\n\n| Commitment | Amount and status |\n|---|---|\n| Total capital investment | Approximately **\u00a360 billion** across UK and US energy networks and adjacent businesses. [[c1]] |\n| Green/transition investment | Approximately **\u00a351 billion**, directly linked to network decarbonisation and aligned with EU Taxonomy climate mitigation and adaptation principles. [[c2]] |\n| Delivered in 2024/25 | **\u00a37.7 billion**, representing approximately **81% of Group capex** that year. [[c3]] |\n| Implied green investment remaining | Approximately **\u00a343.3 billion** through March 2029: **\u00a351bn \u2212 \u00a37.7bn = \u00a343.3bn**. This is an implied balance, not separately stated guidance. [[c4]] |\n\nAround **80% of the overall five-year investment is expected to be in electricity networks**, supporting renewable connections and electrification. [[c5]]\n\n### Examples of earmarked programmes\n\n- **UK Electricity Transmission:** proposed investment of up to **\u00a335 billion for 2026\u201331**, covering capacity expansion, customer connections, network health and resilience. This is a submitted regulatory business plan and therefore depends on government and Ofgem action and approval. [[c6]]\n- **UK Electricity Distribution:** **\u00a36.7 billion during 2023\u201328**, including network reinforcement, asset replacement and infrastructure for EVs, heat pumps and generation. [[c7]]\n- **US regulated businesses:** approximately **\u00a317 billion in New York** and **\u00a311 billion in New England** through 2028/29. [[c8]]\n- **Physical climate resilience:** New York\u2019s approved plan identifies about **$243 million for 2026\u201330**; Group climate-adaptation capex was **\u00a357 million in 2024/25**. [[c9]][[c10]]\n\n**Important distinction:** the \u00a351 billion principally funds network infrastructure that **enables the wider energy transition**. The report does **not provide one separate five-year capex total solely for reducing National Grid\u2019s own Scope 1\u20133 emissions**; those actions include SF\u2086 reduction, fleet electrification, gas-pipe replacement and resilience investment. Delivery also depends on policy, regulation, planning, supply chains and technology. [[c11]]",
+    "status": "answered",
+    "citations": [
+     {
+      "id": "c1",
+      "index": 1,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 20,
+      "cited_page": 20,
+      "printed_page": "18",
+      "section_path": [
+       "Our KPIs",
+       "National Grid 2024/25 KPIs, Assurance, Remuneration and Investment"
+      ],
+      "node_id": "0018",
+      "node_range": [
+       20,
+       20
+      ],
+      "quote": "We expect to invest around \u00a360 billion between April 2024 and March 2029",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.33526,
+        "y": 0.82154,
+        "w": 0.24046,
+        "h": 0.01178
+       },
+       {
+        "x": 0.33526,
+        "y": 0.83357,
+        "w": 0.22578,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Total capital investment Approximately \u00a360 billion across UK and US energy networks and adjacent businesses."
+     },
+     {
+      "id": "c2",
+      "index": 2,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 65,
+      "cited_page": 65,
+      "printed_page": "63",
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02 Strategy"
+      ],
+      "node_id": "0068",
+      "node_range": [
+       65,
+       65
+      ],
+      "quote": "Of this, \u00a351 billion is directly linked to the decarbonisation of energy networks",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.13469,
+        "y": 0.72203,
+        "w": 0.35555,
+        "h": 0.01178
+       },
+       {
+        "x": 0.0837,
+        "y": 0.73406,
+        "w": 0.1006,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Green/transition investment Approximately \u00a351 billion, directly linked to network decarbonisation and aligned with EU Taxonomy climate mitigation and adaptation principles."
+     },
+     {
+      "id": "c3",
+      "index": 3,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 49,
+      "cited_page": 49,
+      "printed_page": "47",
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment",
+       "Decarbonisation, Responsible Resources and Climate Resilience"
+      ],
+      "node_id": "0048",
+      "node_range": [
+       49,
+       49
+      ],
+      "quote": "In 2024/25 around 81% (\u00a37.7 billion) of our Group\u2019s capex aligned to the principles,",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.0837,
+        "y": 0.4855,
+        "w": 0.24467,
+        "h": 0.01178
+       },
+       {
+        "x": 0.0837,
+        "y": 0.49737,
+        "w": 0.22901,
+        "h": 0.01178
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Delivered in 2024/25 \u00a37.7 billion, representing approximately 81% of Group capex that year."
+     },
+     {
+      "id": "c4",
+      "index": 4,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 49,
+      "cited_page": 49,
+      "printed_page": "47",
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment",
+       "Decarbonisation, Responsible Resources and Climate Resilience"
+      ],
+      "node_id": "0048",
+      "node_range": [
+       49,
+       49
+      ],
+      "quote": "We expect to invest approximately \u00a351 billion in green infrastructure and projects in the five-year period from April 2024 to March 2029.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.16076,
+        "y": 0.38595,
+        "w": 0.11944,
+        "h": 0.01161
+       },
+       {
+        "x": 0.0837,
+        "y": 0.39765,
+        "w": 0.2002,
+        "h": 0.01178
+       },
+       {
+        "x": 0.0837,
+        "y": 0.40961,
+        "w": 0.24715,
+        "h": 0.01169
+       },
+       {
+        "x": 0.0837,
+        "y": 0.42148,
+        "w": 0.22655,
+        "h": 0.01169
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Implied green investment remaining Approximately \u00a343.3 billion through March 2029: \u00a351bn \u2212 \u00a37.7bn = \u00a343.3bn. This is an implied balance, not separately stated guidance."
+     },
+     {
+      "id": "c5",
+      "index": 5,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 75,
+      "cited_page": 75,
+      "printed_page": "73",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "4. Transition Opportunity"
+      ],
+      "node_id": "0086",
+      "node_range": [
+       75,
+       76
+      ],
+      "quote": "with around 80% of the investment expected to be in electricity networks over the five years,",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.84679,
+        "y": 0.29653,
+        "w": 0.08986,
+        "h": 0.01053
+       },
+       {
+        "x": 0.67671,
+        "y": 0.30662,
+        "w": 0.23085,
+        "h": 0.01053
+       },
+       {
+        "x": 0.67671,
+        "y": 0.31671,
+        "w": 0.14658,
+        "h": 0.01053
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Around 80% of the overall five-year investment is expected to be in electricity networks, supporting renewable connections and electrification."
+     },
+     {
+      "id": "c6",
+      "index": 6,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 65,
+      "cited_page": 65,
+      "printed_page": "63",
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02 Strategy"
+      ],
+      "node_id": "0068",
+      "node_range": [
+       65,
+       65
+      ],
+      "quote": "This includes up to \u00a335 billion of investment in expanding network capacity, connecting customers, and ensuring the health and resilience of the network.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.42185,
+        "y": 0.81122,
+        "w": 0.08005,
+        "h": 0.01161
+       },
+       {
+        "x": 0.0837,
+        "y": 0.82293,
+        "w": 0.36565,
+        "h": 0.01178
+       },
+       {
+        "x": 0.0837,
+        "y": 0.83488,
+        "w": 0.39949,
+        "h": 0.01169
+       },
+       {
+        "x": 0.0837,
+        "y": 0.84683,
+        "w": 0.0542,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "UK Electricity Transmission: proposed investment of up to \u00a335 billion for 2026\u201331, covering capacity expansion, customer connections, network health and resilience. This is a submitted regulatory business plan and therefore depends on government and Ofgem action and approval."
+     },
+     {
+      "id": "c7",
+      "index": 7,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 65,
+      "cited_page": 65,
+      "printed_page": "63",
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02 Strategy"
+      ],
+      "node_id": "0068",
+      "node_range": [
+       65,
+       65
+      ],
+      "quote": "Our UK ED business is investing \u00a36.7 billion during the ED2 period from 2023 to 2028",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.52204,
+        "y": 0.27093,
+        "w": 0.42126,
+        "h": 0.01178
+       },
+       {
+        "x": 0.52204,
+        "y": 0.28301,
+        "w": 0.08067,
+        "h": 0.01157
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "UK Electricity Distribution: \u00a36.7 billion during 2023\u201328, including network reinforcement, asset replacement and infrastructure for EVs, heat pumps and generation."
+     },
+     {
+      "id": "c8",
+      "index": 8,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 65,
+      "cited_page": 65,
+      "printed_page": "63",
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02 Strategy"
+      ],
+      "node_id": "0068",
+      "node_range": [
+       65,
+       65
+      ],
+      "quote": "we expect to invest around \u00a317 billion and \u00a311 billion in our New York and New England regulated businesses respectively.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.90196,
+        "y": 0.44926,
+        "w": 0.02055,
+        "h": 0.01151
+       },
+       {
+        "x": 0.52204,
+        "y": 0.46087,
+        "w": 0.41655,
+        "h": 0.01178
+       },
+       {
+        "x": 0.52204,
+        "y": 0.4729,
+        "w": 0.28632,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "US regulated businesses: approximately \u00a317 billion in New York and \u00a311 billion in New England through 2028/29."
+     },
+     {
+      "id": "c9",
+      "index": 9,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 76,
+      "cited_page": 76,
+      "printed_page": "74",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ],
+      "node_id": "0087",
+      "node_range": [
+       76,
+       76
+      ],
+      "quote": "approximately $243 million in resilience programmes over a five-year period (2026-2030),",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.36337,
+        "y": 0.48287,
+        "w": 0.19936,
+        "h": 0.01116
+       },
+       {
+        "x": 0.36337,
+        "y": 0.49351,
+        "w": 0.24889,
+        "h": 0.0106
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Physical climate resilience: New York\u2019s approved plan identifies about $243 million for 2026\u201330; Group climate-adaptation capex was \u00a357 million in 2024/25."
+     },
+     {
+      "id": "c10",
+      "index": 10,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 76,
+      "cited_page": 76,
+      "printed_page": "74",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ],
+      "node_id": "0087",
+      "node_range": [
+       76,
+       76
+      ],
+      "quote": "with a further \u00a357 million (2023/24: \u00a330 million) invested in the year.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.70033,
+        "y": 0.50123,
+        "w": 0.19779,
+        "h": 0.0106
+       },
+       {
+        "x": 0.64826,
+        "y": 0.51132,
+        "w": 0.14141,
+        "h": 0.0106
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Physical climate resilience: New York\u2019s approved plan identifies about $243 million for 2026\u201330; Group climate-adaptation capex was \u00a357 million in 2024/25."
+     },
+     {
+      "id": "c11",
+      "index": 11,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 46,
+      "cited_page": 46,
+      "printed_page": "44",
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment"
+      ],
+      "node_id": "0045",
+      "node_range": [
+       46,
+       47
+      ],
+      "quote": "rely heavily on technical dependencies as well as policy and regulatory frameworks to support our emission reduction plans and targets.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.12845,
+        "y": 0.63422,
+        "w": 0.33981,
+        "h": 0.01392
+       },
+       {
+        "x": 0.05525,
+        "y": 0.64837,
+        "w": 0.37758,
+        "h": 0.01402
+       },
+       {
+        "x": 0.05525,
+        "y": 0.66271,
+        "w": 0.27815,
+        "h": 0.01392
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Delivery also depends on policy, regulation, planning, supply chains and technology."
+     }
+    ],
+    "sources": [
+     {
+      "page": 20,
+      "printed_page": "18",
+      "refs": 1,
+      "citation_ids": [
+       "c1"
+      ],
+      "section_path": [
+       "Our KPIs",
+       "National Grid 2024/25 KPIs, Assurance, Remuneration and Investment"
+      ]
+     },
+     {
+      "page": 46,
+      "printed_page": "44",
+      "refs": 1,
+      "citation_ids": [
+       "c11"
+      ],
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment"
+      ]
+     },
+     {
+      "page": 49,
+      "printed_page": "47",
+      "refs": 2,
+      "citation_ids": [
+       "c3",
+       "c4"
+      ],
+      "section_path": [
+       "Responsible Business Review",
+       "Our environment",
+       "Decarbonisation, Responsible Resources and Climate Resilience"
+      ]
+     },
+     {
+      "page": 65,
+      "printed_page": "63",
+      "refs": 4,
+      "citation_ids": [
+       "c2",
+       "c6",
+       "c7",
+       "c8"
+      ],
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02 Strategy"
+      ]
+     },
+     {
+      "page": 75,
+      "printed_page": "73",
+      "refs": 1,
+      "citation_ids": [
+       "c5"
+      ],
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "4. Transition Opportunity"
+      ]
+     },
+     {
+      "page": 76,
+      "printed_page": "74",
+      "refs": 2,
+      "citation_ids": [
+       "c9",
+       "c10"
+      ],
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ]
+     }
+    ],
+    "steps": [
+     {
+      "id": "s1",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 1670
+     },
+     {
+      "id": "s2",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 235
+     },
+     {
+      "id": "s3",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 1662
+     },
+     {
+      "id": "s4",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 173
+     },
+     {
+      "id": "s5",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 4311
+     },
+     {
+      "id": "s6",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 20-21",
+      "pages": [
+       20,
+       21
+      ],
+      "status": "done",
+      "elapsed_ms": 6
+     },
+     {
+      "id": "s7",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 45-49",
+      "pages": [
+       45,
+       46,
+       47,
+       48,
+       49
+      ],
+      "status": "done",
+      "elapsed_ms": 0
+     },
+     {
+      "id": "s8",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 65-66",
+      "pages": [
+       65,
+       66
+      ],
+      "status": "done",
+      "elapsed_ms": 0
+     },
+     {
+      "id": "s9",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 75-79",
+      "pages": [
+       75,
+       76,
+       77,
+       78,
+       79
+      ],
+      "status": "done",
+      "elapsed_ms": 0
+     },
+     {
+      "id": "s10",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 6072
+     }
+    ],
+    "usage": {
+     "model": "gpt-5.6-sol",
+     "input_tokens": 112358,
+     "cached_tokens": 63068,
+     "output_tokens": 1506,
+     "reasoning_tokens": 386,
+     "cost_usd": 0.30178520000000003
+    },
+    "elapsed_ms": 23305,
+    "evaluation": {
+     "status": "done",
+     "faithfulness": 1.0,
+     "answer_relevancy": 0.8166,
+     "context_precision": 0.8268,
+     "errors": {},
+     "context_verdicts": [
+      {
+       "index": 0,
+       "page": 20,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's five-year capital investment plans, including the total expected investment, specific figures for recent years, and the strategic focus on enabling the energy transition. It mentions a \u00a360 billion investment between April 2024 and March 2029, with increased spending on critical energy infrastructure and new transmission projects, whic"
+      },
+      {
+       "index": 1,
+       "page": 21,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's capital expenditure plans over the next five years, including specific figures for green capital investment, total capex, and examples of earmarked programmes. This information directly supports and substantiates the answer, which summarizes and interprets these figures and plans in relation to the company's energy transition objectiv"
+      },
+      {
+       "index": 2,
+       "page": 45,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's planned capital expenditure over the next five years, including the total amount (\u00a360 billion), the proportion classified as green investment (85%), and the focus on enabling the energy transition. It also discusses specific initiatives, timelines, and dependencies on policy and regulation, all of which directly support and substantia"
+      },
+      {
+       "index": 3,
+       "page": 46,
+       "verdict": 0,
+       "reason": "The context discusses National Grid's environmental initiatives, infrastructure upgrades, and commitment to emission reduction, but it does not provide specific figures or details about capital expenditure (capex) earmarked for the next five years. The answer, however, gives detailed capex numbers, timelines, and specific investment programmes, which are not present in the provided context. Theref"
+      },
+      {
+       "index": 4,
+       "page": 47,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's emissions targets, operational changes, and capital expenditure related to infrastructure and decarbonisation efforts. It specifically mentions increased capital investment in new energy infrastructure, including references to capital expenditure associated with the construction of energy infrastructure to support emissions reduction "
+      },
+      {
+       "index": 5,
+       "page": 48,
+       "verdict": 0,
+       "reason": "The provided context focuses on National Grid's supplier engagement, sustainability targets, emissions reductions, and environmental initiatives, but does not mention or detail any capital expenditure (capex) programmes, amounts, or specific five-year investment plans related to the energy transition. The answer, however, provides detailed figures and descriptions of National Grid's announced and "
+      },
+      {
+       "index": 6,
+       "page": 49,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's announced and earmarked capital expenditure plans for the next five years, including specific investment amounts, timeframes, and the focus on green infrastructure and decarbonisation. This directly supports and substantiates the answer, which summarizes and quantifies the capex commitments and their alignment with transition plans."
+      },
+      {
+       "index": 7,
+       "page": 65,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's announced and earmarked capital expenditure plans over the next five years, including specific investment amounts, timelines, and the focus on enabling the energy transition. It outlines the total capex, the portion dedicated to decarbonisation, and examples of major programmes in both the UK and US. This information directly supports"
+      },
+      {
+       "index": 8,
+       "page": 66,
+       "verdict": 0,
+       "reason": "The context provides detailed scenario modelling and assumptions about National Grid's transition planning, climate targets, and strategic approaches, but it does not mention or quantify any specific capital expenditure (capex) amounts, timeframes, or earmarked investments for the next five years. The answer, however, gives precise figures and examples of announced capex programmes, which are not "
+      },
+      {
+       "index": 9,
+       "page": 75,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's announced and earmarked capital expenditure plans for the next five years, including specific figures, timelines, and the focus on enabling the energy transition. This directly supports and substantiates the answer, which summarizes and quantifies the capex commitments and their alignment with transition objectives."
+      },
+      {
+       "index": 10,
+       "page": 76,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's capital expenditure plans, including specific figures, timeframes, and examples of earmarked investments for climate resilience and energy transition over the next five years. This information directly supports and substantiates the answer, which summarizes and quantifies National Grid's announced and planned capex to meet its transit"
+      },
+      {
+       "index": 11,
+       "page": 77,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's climate commitments, performance metrics, and financial planning, including references to capital expenditure (capex) aligned with climate change mitigation and adaptation objectives. It mentions the disclosure of the proportion of capex aligned with EU Taxonomy principles and discusses the integration of climate-related metrics into "
+      }
+     ],
+     "n_contexts_input": 14,
+     "n_contexts_scored": 12,
+     "judge_model": "gpt-4.1",
+     "embedding_model": "text-embedding-3-small",
+     "ragas_version": "0.4.3",
+     "latency_s": 15.09,
+     "skipped_reason": null
+    },
+    "error": null,
+    "created_at": "2026-10-08T05:05:24Z",
+    "key_source": "server"
+   },
+   "contexts": []
+  },
+  {
+   "message": {
+    "id": "fe5e8edcadc64b3b9991b862c5b792e8",
+    "session_id": "0aa01c3630794f759490445de3ffd455",
+    "role": "user",
+    "content": "To the best of your knowledge how prepared is the company for acute and chronic physical risk events through adaptation and resiliency measures on its business?",
+    "status": "answered",
+    "citations": [],
+    "sources": [],
+    "steps": [],
+    "usage": null,
+    "elapsed_ms": null,
+    "evaluation": null,
+    "error": null,
+    "created_at": "2026-10-08T05:06:20Z",
+    "key_source": "server"
+   },
+   "contexts": []
+  },
+  {
+   "message": {
+    "id": "d0d98f77a3414485802f60195b807152",
+    "session_id": "0aa01c3630794f759490445de3ffd455",
+    "role": "assistant",
+    "content": "## Assessment: reasonably well prepared, but adaptation is still maturing\n\nAs of **31 March 2025**, National Grid appears **moderately to strongly prepared for acute physical events**, supported by established emergency-response capabilities, resilience standards and asset hardening. Preparation for **chronic climate change is credible but less complete**, because several vulnerability assessments, adaptation plans and investments remain in development.\n\n### Evidence of preparedness\n\n- **Detailed risk identification:** National Grid models 2\u00b0C and 4\u00b0C physical-risk scenarios across the 2030s\u20132070s. It identifies flooding, heat, high winds, cold and wildfire as key hazards; heat and coastal/river flooding are particular concerns.[[c1]]\n\n- **Long-term asset planning:** Its Group-wide Climate Vulnerability Assessment considers assets that often have lives of 50 years or more and is intended to influence locations, designs, engineering standards, asset policies and capital investment.[[c2]]\n\n- **Embedded governance and controls:** Physical climate risk is incorporated into enterprise risk management and the \u201csignificant disruption of energy\u201d principal-risk framework.[[c3]] Controls include resilience standards, asset hardening, flood protection, crisis and business-continuity plans, training and exercises.[[c4]]\n\n- **Funded resilience measures:** The Group invested **\u00a357 million in climate adaptation during 2024/25**, up from \u00a330 million, principally in storm hardening and flood defences.[[c5]] New York\u2019s approved plan identifies approximately **$243 million for 2026\u201330**, rising cumulatively to **$1.39 billion by 2045**.[[c6]][[c7]]\n\n- **Demonstrated acute-event response:** During Storm Darragh, approximately 750,000 UK distribution customers were affected, but 95% were restored within 48 hours.[[c8]] New York handled 16 major storms and reported restoring 95% of affected customers within 10 hours.[[c9]]\n\n- **Financial recovery mechanisms:** Major-storm costs were **\u00a387 million in 2024/25**, down from \u00a3226 million, with regulatory mechanisms allowing qualifying US and UK costs to be recovered.[[c10]]\n\n### Important gaps and residual risks\n\n- The climate-risk tool **does not yet include UK Electricity Distribution or National Grid Ventures\u2019 UK assets**, leaving incomplete asset-level coverage.[[c11]]\n\n- The Group-wide vulnerability assessment is a **phased programme**, rather than a fully executed adaptation plan.[[c12]]\n\n- Massachusetts published its vulnerability assessment only in February 2025, as the foundation for a future comprehensive resilience plan; UK Electricity Transmission\u2019s Climate Adaptation Strategy is due in 2026.[[c13]][[c14]]\n\n- Residual exposure remains significant: the company expects extreme-weather incidents and associated costs to grow unless adaptation is implemented effectively, while insurance premiums may increase.[[c15]]\n\n## Conclusion\n\nNational Grid is **operationally well prepared for current acute events** and has credible governance, modelling, response procedures and funded hardening measures. However, its **chronic-risk preparation is not yet fully mature or uniformly implemented across the portfolio**. The company itself concludes that even its worst-case scenarios do not threaten Group resilience,[[c16]] but that conclusion depends on completing planned assessments, strategies and multi-decade resilience investments.",
+    "status": "answered",
+    "citations": [
+     {
+      "id": "c1",
+      "index": 1,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 69,
+      "cited_page": 69,
+      "printed_page": "67",
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02_Strategy_Continued",
+       "Physical Climate Risk Scenario Modelling and Assessment"
+      ],
+      "node_id": "0075",
+      "node_range": [
+       69,
+       69
+      ],
+      "quote": "Most hazards are projected to increase in frequency in the future, with high temperatures and coastal and river flooding of particular concern",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.52204,
+        "y": 0.15777,
+        "w": 0.41258,
+        "h": 0.01169
+       },
+       {
+        "x": 0.52204,
+        "y": 0.16964,
+        "w": 0.41126,
+        "h": 0.01169
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Detailed risk identification: National Grid models 2\u00b0C and 4\u00b0C physical-risk scenarios across the 2030s\u20132070s. It identifies flooding, heat, high winds, cold and wildfire as key hazards; heat and coastal/river flooding are particular concerns."
+     },
+     {
+      "id": "c2",
+      "index": 2,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 70,
+      "cited_page": 70,
+      "printed_page": "68",
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02_Strategy_Continued",
+       "Climate Vulnerability Assessment (CVA)"
+      ],
+      "node_id": "0077",
+      "node_range": [
+       70,
+       71
+      ],
+      "quote": "The typical lifespan of our assets is often 50 years or more, so future climate hazards need to be considered during the planning process",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.05525,
+        "y": 0.24383,
+        "w": 0.40292,
+        "h": 0.01169
+       },
+       {
+        "x": 0.05525,
+        "y": 0.25578,
+        "w": 0.39783,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Long-term asset planning: Its Group-wide Climate Vulnerability Assessment considers assets that often have lives of 50 years or more and is intended to influence locations, designs, engineering standards, asset policies and capital investment."
+     },
+     {
+      "id": "c3",
+      "index": 3,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 71,
+      "cited_page": 71,
+      "printed_page": "69",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "Climate Change Risk Management and Financial Risk Assessment"
+      ],
+      "node_id": "0079",
+      "node_range": [
+       71,
+       71
+      ],
+      "quote": "Climate change is a key risk factor for the Group and we have integrated it into our ERM process.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.0837,
+        "y": 0.2688,
+        "w": 0.36414,
+        "h": 0.01178
+       },
+       {
+        "x": 0.0837,
+        "y": 0.28083,
+        "w": 0.20751,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Embedded governance and controls: Physical climate risk is incorporated into enterprise risk management and the \u201csignificant disruption of energy\u201d principal-risk framework."
+     },
+     {
+      "id": "c4",
+      "index": 4,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 71,
+      "cited_page": 71,
+      "printed_page": "69",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "Climate Change Risk Management and Financial Risk Assessment"
+      ],
+      "node_id": "0079",
+      "node_range": [
+       71,
+       71
+      ],
+      "quote": "This includes the development of crisis management and business continuity plans, training, and exercises",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.61557,
+        "y": 0.63332,
+        "w": 0.31137,
+        "h": 0.01169
+       },
+       {
+        "x": 0.53626,
+        "y": 0.64526,
+        "w": 0.31549,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Embedded governance and controls: Physical climate risk is incorporated into enterprise risk management and the \u201csignificant disruption of energy\u201d principal-risk framework. Controls include resilience standards, asset hardening, flood protection, crisis and business-continuity plans, training and exercises."
+     },
+     {
+      "id": "c5",
+      "index": 5,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 76,
+      "cited_page": 76,
+      "printed_page": "74",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ],
+      "node_id": "0087",
+      "node_range": [
+       76,
+       76
+      ],
+      "quote": "with a further \u00a357 million (2023/24: \u00a330 million) invested in the year.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.70033,
+        "y": 0.50123,
+        "w": 0.19779,
+        "h": 0.0106
+       },
+       {
+        "x": 0.64826,
+        "y": 0.51132,
+        "w": 0.14141,
+        "h": 0.0106
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Funded resilience measures: The Group invested \u00a357 million in climate adaptation during 2024/25, up from \u00a330 million, principally in storm hardening and flood defences."
+     },
+     {
+      "id": "c6",
+      "index": 6,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 76,
+      "cited_page": 76,
+      "printed_page": "74",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ],
+      "node_id": "0087",
+      "node_range": [
+       76,
+       76
+      ],
+      "quote": "approximately $243 million in resilience programmes over a five-year period (2026-2030),",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.36337,
+        "y": 0.48287,
+        "w": 0.19936,
+        "h": 0.01116
+       },
+       {
+        "x": 0.36337,
+        "y": 0.49351,
+        "w": 0.24889,
+        "h": 0.0106
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Funded resilience measures: The Group invested \u00a357 million in climate adaptation during 2024/25, up from \u00a330 million, principally in storm hardening and flood defences. New York\u2019s approved plan identifies approximately $243 million for 2026\u201330, rising cumulatively to $1.39 billion by 2045."
+     },
+     {
+      "id": "c7",
+      "index": 7,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 76,
+      "cited_page": 76,
+      "printed_page": "74",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ],
+      "node_id": "0087",
+      "node_range": [
+       76,
+       76
+      ],
+      "quote": "$1.39 billion by the twentieth year (2026-2045).",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.38543,
+        "y": 0.52323,
+        "w": 0.23746,
+        "h": 0.01116
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Funded resilience measures: The Group invested \u00a357 million in climate adaptation during 2024/25, up from \u00a330 million, principally in storm hardening and flood defences. New York\u2019s approved plan identifies approximately $243 million for 2026\u201330, rising cumulatively to $1.39 billion by 2045."
+     },
+     {
+      "id": "c8",
+      "index": 8,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 29,
+      "cited_page": 29,
+      "printed_page": "27",
+      "section_path": [
+       "Our Business Units",
+       "Build tomorrow\u2019s workforce today Looking ahead",
+       "Deliver for customers"
+      ],
+      "node_id": "0032",
+      "node_range": [
+       29,
+       30
+      ],
+      "quote": "we were able to restore power to 95% of customers within 48 hours.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.6217,
+        "y": 0.41646,
+        "w": 0.02055,
+        "h": 0.01151
+       },
+       {
+        "x": 0.37592,
+        "y": 0.42815,
+        "w": 0.22188,
+        "h": 0.01169
+       },
+       {
+        "x": 0.37592,
+        "y": 0.4401,
+        "w": 0.16158,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Demonstrated acute-event response: During Storm Darragh, approximately 750,000 UK distribution customers were affected, but 95% were restored within 48 hours."
+     },
+     {
+      "id": "c9",
+      "index": 9,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 32,
+      "cited_page": 32,
+      "printed_page": "30",
+      "section_path": [
+       "Our Business Units",
+       "Build tomorrow\u2019s workforce today Looking ahead",
+       "New York"
+      ],
+      "node_id": "0035",
+      "node_range": [
+       31,
+       33
+      ],
+      "quote": "We achieved an electricity restoration rate of 95% within 10 hours for impacted customers.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.54171,
+        "y": 0.62932,
+        "w": 0.0791,
+        "h": 0.01161
+       },
+       {
+        "x": 0.34747,
+        "y": 0.64112,
+        "w": 0.27214,
+        "h": 0.01169
+       },
+       {
+        "x": 0.34747,
+        "y": 0.65299,
+        "w": 0.18329,
+        "h": 0.01169
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Demonstrated acute-event response: During Storm Darragh, approximately 750,000 UK distribution customers were affected, but 95% were restored within 48 hours. New York handled 16 major storms and reported restoring 95% of affected customers within 10 hours."
+     },
+     {
+      "id": "c10",
+      "index": 10,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 76,
+      "cited_page": 76,
+      "printed_page": "74",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ],
+      "node_id": "0087",
+      "node_range": [
+       76,
+       76
+      ],
+      "quote": "major storms, totalling \u00a387 million (2023/24: \u00a3226 million).",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.36337,
+        "y": 0.27568,
+        "w": 0.25002,
+        "h": 0.0106
+       },
+       {
+        "x": 0.36337,
+        "y": 0.28577,
+        "w": 0.04138,
+        "h": 0.0106
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Financial recovery mechanisms: Major-storm costs were \u00a387 million in 2024/25, down from \u00a3226 million, with regulatory mechanisms allowing qualifying US and UK costs to be recovered."
+     },
+     {
+      "id": "c11",
+      "index": 11,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 69,
+      "cited_page": 69,
+      "printed_page": "67",
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02_Strategy_Continued",
+       "Physical Climate Risk Scenario Modelling and Assessment"
+      ],
+      "node_id": "0075",
+      "node_range": [
+       69,
+       69
+      ],
+      "quote": "the CCRT does not currently include NGED and NGV UK\u2019s assets.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.62853,
+        "y": 0.31201,
+        "w": 0.31364,
+        "h": 0.01178
+       },
+       {
+        "x": 0.52204,
+        "y": 0.32404,
+        "w": 0.07695,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "The climate-risk tool does not yet include UK Electricity Distribution or National Grid Ventures\u2019 UK assets, leaving incomplete asset-level coverage."
+     },
+     {
+      "id": "c12",
+      "index": 12,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 70,
+      "cited_page": 70,
+      "printed_page": "68",
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02_Strategy_Continued",
+       "Climate Vulnerability Assessment (CVA)"
+      ],
+      "node_id": "0077",
+      "node_range": [
+       70,
+       71
+      ],
+      "quote": "It is a phased programme of activity which will deliver an adaptation plan",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.49359,
+        "y": 0.16667,
+        "w": 0.39954,
+        "h": 0.01169
+       },
+       {
+        "x": 0.49359,
+        "y": 0.17862,
+        "w": 0.02849,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "The Group-wide vulnerability assessment is a phased programme, rather than a fully executed adaptation plan."
+     },
+     {
+      "id": "c13",
+      "index": 13,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 76,
+      "cited_page": 76,
+      "printed_page": "74",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ],
+      "node_id": "0087",
+      "node_range": [
+       76,
+       76
+      ],
+      "quote": "published a CVA in February 2025, which will serve as the foundation for a comprehensive resilience plan.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.36337,
+        "y": 0.64071,
+        "w": 0.25905,
+        "h": 0.0106
+       },
+       {
+        "x": 0.36337,
+        "y": 0.65088,
+        "w": 0.19613,
+        "h": 0.01053
+       },
+       {
+        "x": 0.36337,
+        "y": 0.66103,
+        "w": 0.07787,
+        "h": 0.01046
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Massachusetts published its vulnerability assessment only in February 2025, as the foundation for a future comprehensive resilience plan; UK Electricity Transmission\u2019s Climate Adaptation Strategy is due in 2026."
+     },
+     {
+      "id": "c14",
+      "index": 14,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 76,
+      "cited_page": 76,
+      "printed_page": "74",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ],
+      "node_id": "0087",
+      "node_range": [
+       76,
+       76
+      ],
+      "quote": "publishing a Climate Adaptation Strategy by 2026.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.77318,
+        "y": 0.45493,
+        "w": 0.10539,
+        "h": 0.0106
+       },
+       {
+        "x": 0.64819,
+        "y": 0.46502,
+        "w": 0.15021,
+        "h": 0.0106
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Massachusetts published its vulnerability assessment only in February 2025, as the foundation for a future comprehensive resilience plan; UK Electricity Transmission\u2019s Climate Adaptation Strategy is due in 2026."
+     },
+     {
+      "id": "c15",
+      "index": 15,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 76,
+      "cited_page": 76,
+      "printed_page": "74",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ],
+      "node_id": "0087",
+      "node_range": [
+       76,
+       76
+      ],
+      "quote": "associated costs are expected to grow accordingly, unless climate adaptation is appropriately implemented.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.36337,
+        "y": 0.75956,
+        "w": 0.19819,
+        "h": 0.01046
+       },
+       {
+        "x": 0.36337,
+        "y": 0.76965,
+        "w": 0.20666,
+        "h": 0.01046
+       },
+       {
+        "x": 0.36337,
+        "y": 0.77974,
+        "w": 0.14105,
+        "h": 0.01046
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Residual exposure remains significant: the company expects extreme-weather incidents and associated costs to grow unless adaptation is implemented effectively, while insurance premiums may increase."
+     },
+     {
+      "id": "c16",
+      "index": 16,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 76,
+      "cited_page": 76,
+      "printed_page": "74",
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ],
+      "node_id": "0087",
+      "node_range": [
+       76,
+       76
+      ],
+      "quote": "even under the worst-case scenarios considered, none of the risks identified threaten the resilience of the Group",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.30033,
+        "y": 0.84747,
+        "w": 0.59694,
+        "h": 0.01169
+       },
+       {
+        "x": 0.05525,
+        "y": 0.85925,
+        "w": 0.0625,
+        "h": 0.01178
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "The company itself concludes that even its worst-case scenarios do not threaten Group resilience,"
+     }
+    ],
+    "sources": [
+     {
+      "page": 29,
+      "printed_page": "27",
+      "refs": 1,
+      "citation_ids": [
+       "c8"
+      ],
+      "section_path": [
+       "Our Business Units",
+       "Build tomorrow\u2019s workforce today Looking ahead",
+       "Deliver for customers"
+      ]
+     },
+     {
+      "page": 32,
+      "printed_page": "30",
+      "refs": 1,
+      "citation_ids": [
+       "c9"
+      ],
+      "section_path": [
+       "Our Business Units",
+       "Build tomorrow\u2019s workforce today Looking ahead",
+       "New York"
+      ]
+     },
+     {
+      "page": 69,
+      "printed_page": "67",
+      "refs": 2,
+      "citation_ids": [
+       "c1",
+       "c11"
+      ],
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02_Strategy_Continued",
+       "Physical Climate Risk Scenario Modelling and Assessment"
+      ]
+     },
+     {
+      "page": 70,
+      "printed_page": "68",
+      "refs": 2,
+      "citation_ids": [
+       "c2",
+       "c12"
+      ],
+      "section_path": [
+       "TCFD",
+       "02_Strat_Intro",
+       "02_Strategy_Continued",
+       "Climate Vulnerability Assessment (CVA)"
+      ]
+     },
+     {
+      "page": 71,
+      "printed_page": "69",
+      "refs": 2,
+      "citation_ids": [
+       "c3",
+       "c4"
+      ],
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "Climate Change Risk Management and Financial Risk Assessment"
+      ]
+     },
+     {
+      "page": 76,
+      "printed_page": "74",
+      "refs": 8,
+      "citation_ids": [
+       "c5",
+       "c6",
+       "c7",
+       "c10",
+       "c13",
+       "c14",
+       "c15",
+       "c16"
+      ],
+      "section_path": [
+       "TCFD",
+       "03_Risk_Intro",
+       "03_Risk_Continued",
+       "Physical Climate Risks, Resilience Measures and Adaptation"
+      ]
+     }
+    ],
+    "steps": [
+     {
+      "id": "s1",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 1635
+     },
+     {
+      "id": "s2",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 199
+     },
+     {
+      "id": "s3",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 3095
+     },
+     {
+      "id": "s4",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 288
+     },
+     {
+      "id": "s5",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 5296
+     },
+     {
+      "id": "s6",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 69-77",
+      "pages": [
+       69,
+       70,
+       71,
+       72,
+       73,
+       74,
+       75,
+       76,
+       77
+      ],
+      "status": "done",
+      "elapsed_ms": 236
+     },
+     {
+      "id": "s7",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 29-32",
+      "pages": [
+       29,
+       30,
+       31,
+       32
+      ],
+      "status": "done",
+      "elapsed_ms": 0
+     },
+     {
+      "id": "s8",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 39-43",
+      "pages": [
+       39,
+       40,
+       41,
+       42,
+       43
+      ],
+      "status": "done",
+      "elapsed_ms": 0
+     },
+     {
+      "id": "s9",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 8020
+     }
+    ],
+    "usage": {
+     "model": "gpt-5.6-sol",
+     "input_tokens": 116550,
+     "cached_tokens": 64929,
+     "output_tokens": 1990,
+     "reasoning_tokens": 581,
+     "cost_usd": 0.3238646
+    },
+    "elapsed_ms": 31109,
+    "evaluation": {
+     "status": "done",
+     "faithfulness": 1.0,
+     "answer_relevancy": 0.8406,
+     "context_precision": 1.0,
+     "errors": {},
+     "context_verdicts": [
+      {
+       "index": 0,
+       "page": 69,
+       "verdict": 1,
+       "reason": "The context provides detailed information on National Grid's preparedness for acute and chronic physical risk events, including scenario modelling, risk identification, governance, investments, and response capabilities. The answer accurately reflects this information by summarizing the level of preparedness, evidence of measures taken, and existing gaps, demonstrating that the context was essenti"
+      },
+      {
+       "index": 1,
+       "page": 70,
+       "verdict": 1,
+       "reason": "The context provides a detailed and comprehensive overview of National Grid's preparedness for acute and chronic physical risk events, including climate vulnerability assessments, adaptation plans, governance, investments, and response capabilities. The answer accurately reflects this information by summarizing the level of preparedness, evidence, gaps, and conclusions drawn from the context. Ther"
+      },
+      {
+       "index": 2,
+       "page": 71,
+       "verdict": 1,
+       "reason": "The context provides detailed information on National Grid's integration of climate change risks into its enterprise risk management, specific adaptation and resilience measures, governance frameworks, financial investments, and operational responses to acute physical events. This comprehensive information directly supports the assessment given in the answer about National Grid being reasonably we"
+      },
+      {
+       "index": 3,
+       "page": 72,
+       "verdict": 1,
+       "reason": "The context provides a detailed and comprehensive overview of National Grid's preparedness for acute and chronic physical risk events, including specific adaptation and resiliency measures, investments, governance, and identified gaps. This information directly supports the assessment given in the answer about the company's moderate to strong preparedness for acute events and the ongoing developme"
+      },
+      {
+       "index": 4,
+       "page": 73,
+       "verdict": 1,
+       "reason": "The provided context contains detailed information about National Grid's risk management, adaptation, and resiliency measures related to physical risks, including acute and chronic events. The answer accurately summarizes this information by assessing the company's preparedness level, citing specific evidence such as risk identification, asset planning, governance, investments, and response capabi"
+      },
+      {
+       "index": 5,
+       "page": 74,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's risk management, adaptation, and resilience measures related to physical climate risks, including acute and chronic events. The answer directly reflects this information by assessing the company's preparedness, citing specific evidence and gaps mentioned in the context. Therefore, the context was useful in arriving at the given answer"
+      },
+      {
+       "index": 6,
+       "page": 75,
+       "verdict": 1,
+       "reason": "The context provides detailed information on National Grid's preparedness for acute and chronic physical risk events, including risk identification, asset planning, governance, funded resilience measures, and response to recent storms. This information directly supports the assessment given in the answer about National Grid being reasonably well prepared for acute events but still maturing in chro"
+      },
+      {
+       "index": 7,
+       "page": 76,
+       "verdict": 1,
+       "reason": "The context provides extensive and detailed information about National Grid's preparedness for acute and chronic physical risk events, including risk identification, governance, investments, response capabilities, and ongoing adaptation plans. This information directly supports the assessment given in the answer about the company's reasonable preparedness and the maturity level of its adaptation m"
+      },
+      {
+       "index": 8,
+       "page": 77,
+       "verdict": 1,
+       "reason": "The context provides detailed information on National Grid's preparedness for acute and chronic physical risk events, including metrics, governance, investments, and identified gaps. This information directly supports the assessment given in the answer about the company's reasonable preparedness for acute events and the maturing state of adaptation for chronic risks."
+      },
+      {
+       "index": 9,
+       "page": 29,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's preparedness for acute physical risk events, including emergency response capabilities, resilience standards, and asset hardening, as well as ongoing investments and governance structures. It also highlights gaps in chronic risk adaptation and ongoing development of vulnerability assessments and plans. This comprehensive information d"
+      },
+      {
+       "index": 10,
+       "page": 30,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's preparedness for acute and chronic physical risk events, including investments, risk assessments, governance, and response capabilities. The answer accurately reflects this information by summarizing the level of preparedness, evidence, and gaps, demonstrating that the context was essential in forming the answer."
+      },
+      {
+       "index": 11,
+       "page": 32,
+       "verdict": 1,
+       "reason": "The context provides extensive and detailed information about National Grid's preparedness for acute and chronic physical risk events, including specific adaptation and resiliency measures, investments, governance, and response capabilities. The answer accurately summarizes this information, reflecting the context's content about both strengths and gaps in preparedness."
+      }
+     ],
+     "n_contexts_input": 18,
+     "n_contexts_scored": 12,
+     "judge_model": "gpt-4.1-mini",
+     "embedding_model": "text-embedding-3-small",
+     "ragas_version": "0.4.3",
+     "latency_s": 25.64,
+     "skipped_reason": null
+    },
+    "error": null,
+    "created_at": "2026-10-08T05:06:20Z",
+    "key_source": "server"
+   },
+   "contexts": []
+  },
+  {
+   "message": {
+    "id": "c3ce3457b60545a4bc2fa5f55f78a1d4",
+    "session_id": "0aa01c3630794f759490445de3ffd455",
+    "role": "user",
+    "content": "What is Management Outlook ?",
+    "status": "answered",
+    "citations": [],
+    "sources": [],
+    "steps": [],
+    "usage": null,
+    "elapsed_ms": null,
+    "evaluation": null,
+    "error": null,
+    "created_at": "2026-10-08T05:07:17Z",
+    "key_source": "server"
+   },
+   "contexts": []
+  },
+  {
+   "message": {
+    "id": "9eff94ecfcee4a96bbedd49da29aa03a",
+    "session_id": "0aa01c3630794f759490445de3ffd455",
+    "role": "assistant",
+    "content": "## Management outlook\n\nManagement\u2019s outlook is **positive but execution-intensive**. National Grid believes it has a solid platform and significant growth opportunities, driven by accelerating demand for secure, affordable and cleaner energy infrastructure. [[c1]]\n\n### Five-year outlook to 31 March 2029\n\n| Management target | Outlook |\n|---|---|\n| Capital investment | Approximately **\u00a360 billion** from April 2024 to March 2029. [[c2]] |\n| Green investment | Approximately **\u00a351 billion**, primarily supporting electricity networks and energy-system decarbonisation. [[c3]] |\n| Asset growth | Approximately **10% compound annual growth** from the March 2024 baseline. [[c4]] |\n| Underlying EPS | **6%\u20138% compound annual growth**, using 2024/25 underlying EPS as the baseline. [[c5]] |\n| Dividend | Annual dividend per share is intended to grow in line with **UK CPIH inflation**. [[c6]] |\n| Balance sheet | Management intends to maintain credit metrics above current rating thresholds; regulatory gearing should trend toward the **high-60% range** by the end of RIIO-T3. [[c7]] |\n\n### Strategic and operational emphasis\n\nManagement is focused on:\n\n- Building and operating infrastructure at the required **speed and scale**, while seeking the lowest possible cost for customers. [[c8]]\n- Strengthening and modernising UK and US networks to support reliability, economic growth, security of supply and lower emissions. [[c9]]\n- Continuing its strategic refocus on networks, including the announced sale of National Grid Renewables and proposed sale of Grain LNG. [[c10]]\n\n### Current trajectory\n\nIn 2024/25, National Grid invested **\u00a39.847 billion**, achieved **9.0% asset growth**, **9.0% Group return on equity**, and grew underlying EPS by **2% to 73.3p**. [[c11]] [[c12]] [[c13]]\n\n**Overall assessment:** management expects strong investment-led asset and earnings growth through March 2029, supported by regulated network expansion and an inflation-linked dividend. Delivery remains dependent on obtaining suitable regulatory frameworks, executing an exceptionally large capital programme efficiently and maintaining affordability and balance-sheet strength.",
+    "status": "answered",
+    "citations": [
+     {
+      "id": "c1",
+      "index": 1,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 9,
+      "cited_page": 9,
+      "printed_page": "7",
+      "section_path": [
+       "Chief Executive\u2019s review"
+      ],
+      "node_id": "0005",
+      "node_range": [
+       7,
+       10
+      ],
+      "quote": "After another year of strong performance, we have a solid platform to build on.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.37584,
+        "y": 0.15777,
+        "w": 0.26656,
+        "h": 0.01169
+       },
+       {
+        "x": 0.37592,
+        "y": 0.16964,
+        "w": 0.19502,
+        "h": 0.01169
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "National Grid believes it has a solid platform and significant growth opportunities, driven by accelerating demand for secure, affordable and cleaner energy infrastructure."
+     },
+     {
+      "id": "c2",
+      "index": 2,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 20,
+      "cited_page": 20,
+      "printed_page": "18",
+      "section_path": [
+       "Our KPIs",
+       "National Grid 2024/25 KPIs, Assurance, Remuneration and Investment"
+      ],
+      "node_id": "0018",
+      "node_range": [
+       20,
+       20
+      ],
+      "quote": "We expect to invest around \u00a360 billion between April 2024 and March 2029",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.33526,
+        "y": 0.82154,
+        "w": 0.24046,
+        "h": 0.01178
+       },
+       {
+        "x": 0.33526,
+        "y": 0.83357,
+        "w": 0.22578,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Capital investment Approximately \u00a360 billion from April 2024 to March 2029."
+     },
+     {
+      "id": "c3",
+      "index": 3,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 21,
+      "cited_page": 21,
+      "printed_page": "19",
+      "section_path": [
+       "Our KPIs",
+       "Financial Measures and KPI Performance"
+      ],
+      "node_id": "0020",
+      "node_range": [
+       21,
+       21
+      ],
+      "quote": "We expect to invest around \u00a351 billion in green capital investment between April 2024 and March 2029",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.3637,
+        "y": 0.27655,
+        "w": 0.25517,
+        "h": 0.01178
+       },
+       {
+        "x": 0.3637,
+        "y": 0.28858,
+        "w": 0.24742,
+        "h": 0.01161
+       },
+       {
+        "x": 0.3637,
+        "y": 0.30045,
+        "w": 0.136,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Green investment Approximately \u00a351 billion, primarily supporting electricity networks and energy-system decarbonisation."
+     },
+     {
+      "id": "c4",
+      "index": 4,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 21,
+      "cited_page": 21,
+      "printed_page": "19",
+      "section_path": [
+       "Our KPIs",
+       "Financial Measures and KPI Performance"
+      ],
+      "node_id": "0020",
+      "node_range": [
+       21,
+       21
+      ],
+      "quote": "Our aim is to achieve c.10% CAGR asset growth April 2024 to March 2029",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.3637,
+        "y": 0.67927,
+        "w": 0.21953,
+        "h": 0.01178
+       },
+       {
+        "x": 0.3637,
+        "y": 0.6913,
+        "w": 0.24284,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Asset growth Approximately 10% compound annual growth from the March 2024 baseline."
+     },
+     {
+      "id": "c5",
+      "index": 5,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 20,
+      "cited_page": 20,
+      "printed_page": "18",
+      "section_path": [
+       "Our KPIs",
+       "National Grid 2024/25 KPIs, Assurance, Remuneration and Investment"
+      ],
+      "node_id": "0018",
+      "node_range": [
+       20,
+       20
+      ],
+      "quote": "we aim to grow Underlying EPS by 6-8% CAGR over the period to March 2029**",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.41034,
+        "y": 0.65551,
+        "w": 0.17107,
+        "h": 0.01161
+       },
+       {
+        "x": 0.33526,
+        "y": 0.66722,
+        "w": 0.24095,
+        "h": 0.01178
+       },
+       {
+        "x": 0.33526,
+        "y": 0.67925,
+        "w": 0.08687,
+        "h": 0.01161
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Underlying EPS 6%\u20138% compound annual growth, using 2024/25 underlying EPS as the baseline."
+     },
+     {
+      "id": "c6",
+      "index": 6,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 83,
+      "cited_page": 83,
+      "printed_page": "81",
+      "section_path": [
+       "Financial Review Summary",
+       "Financial Review",
+       "Summary of Group financial performance for the year ended 31 March 2025"
+      ],
+      "node_id": "0097",
+      "node_range": [
+       82,
+       84
+      ],
+      "quote": "aims to grow annual DPS in line with UK CPIH, thus maintaining the DPS in real terms.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.31303,
+        "y": 0.83343,
+        "w": 0.16558,
+        "h": 0.01178
+       },
+       {
+        "x": 0.0837,
+        "y": 0.8453,
+        "w": 0.34224,
+        "h": 0.01178
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Dividend Annual dividend per share is intended to grow in line with UK CPIH inflation."
+     },
+     {
+      "id": "c7",
+      "index": 7,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 8,
+      "cited_page": 8,
+      "printed_page": "6",
+      "section_path": [
+       "Chief Executive\u2019s review"
+      ],
+      "node_id": "0005",
+      "node_range": [
+       7,
+       10
+      ],
+      "quote": "Credit metrics maintained above current rating thresholds3",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.3571,
+        "y": 0.69203,
+        "w": 0.23873,
+        "h": 0.01178
+       },
+       {
+        "x": 0.3571,
+        "y": 0.70311,
+        "w": 0.10621,
+        "h": 0.01256
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Balance sheet Management intends to maintain credit metrics above current rating thresholds; regulatory gearing should trend toward the high-60% range by the end of RIIO-T3."
+     },
+     {
+      "id": "c8",
+      "index": 8,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 9,
+      "cited_page": 9,
+      "printed_page": "7",
+      "section_path": [
+       "Chief Executive\u2019s review"
+      ],
+      "node_id": "0005",
+      "node_range": [
+       7,
+       10
+      ],
+      "quote": "building and operating the infrastructure needed to meet accelerating demand at the right speed and scale for the lowest possible cost.",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.54933,
+        "y": 0.19346,
+        "w": 0.07549,
+        "h": 0.01161
+       },
+       {
+        "x": 0.37592,
+        "y": 0.20525,
+        "w": 0.25799,
+        "h": 0.01169
+       },
+       {
+        "x": 0.37592,
+        "y": 0.2172,
+        "w": 0.25866,
+        "h": 0.01161
+       },
+       {
+        "x": 0.37592,
+        "y": 0.229,
+        "w": 0.20205,
+        "h": 0.01169
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Building and operating infrastructure at the required speed and scale, while seeking the lowest possible cost for customers."
+     },
+     {
+      "id": "c9",
+      "index": 9,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 7,
+      "cited_page": 7,
+      "printed_page": "5",
+      "section_path": [
+       "Chief Executive\u2019s review"
+      ],
+      "node_id": "0005",
+      "node_range": [
+       7,
+       10
+      ],
+      "quote": "strengthening and modernising our networks is the key to helping our regions attract investment and bolster security of supply,",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.46747,
+        "y": 0.59131,
+        "w": 0.1095,
+        "h": 0.01161
+       },
+       {
+        "x": 0.37592,
+        "y": 0.60318,
+        "w": 0.27643,
+        "h": 0.01161
+       },
+       {
+        "x": 0.37592,
+        "y": 0.61505,
+        "w": 0.24798,
+        "h": 0.01161
+       },
+       {
+        "x": 0.37592,
+        "y": 0.62685,
+        "w": 0.11024,
+        "h": 0.01169
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Strengthening and modernising UK and US networks to support reliability, economic growth, security of supply and lower emissions."
+     },
+     {
+      "id": "c10",
+      "index": 10,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 8,
+      "cited_page": 8,
+      "printed_page": "6",
+      "section_path": [
+       "Chief Executive\u2019s review"
+      ],
+      "node_id": "0005",
+      "node_range": [
+       7,
+       10
+      ],
+      "quote": "we have announced the sale of National Grid Renewables to Brookfield for $1.7 billion and launched the sale of our LNG facility",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.34747,
+        "y": 0.25265,
+        "w": 0.26588,
+        "h": 0.01178
+       },
+       {
+        "x": 0.34747,
+        "y": 0.26389,
+        "w": 0.26535,
+        "h": 0.01241
+       },
+       {
+        "x": 0.34747,
+        "y": 0.27639,
+        "w": 0.21511,
+        "h": 0.01178
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "Continuing its strategic refocus on networks, including the announced sale of National Grid Renewables and proposed sale of Grain LNG."
+     },
+     {
+      "id": "c11",
+      "index": 11,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 82,
+      "cited_page": 82,
+      "printed_page": "80",
+      "section_path": [
+       "Financial Review Summary",
+       "Financial Review",
+       "Summary of Group financial performance for the year ended 31 March 2025"
+      ],
+      "node_id": "0097",
+      "node_range": [
+       82,
+       84
+      ],
+      "quote": "Underlying earnings1 3,452 2,879 20%",
+      "quote_source": "model",
+      "match_method": "fuzzy",
+      "match_score": 0.8535,
+      "rects": [
+       {
+        "x": 0.05966,
+        "y": 0.54274,
+        "w": 0.11933,
+        "h": 0.01126
+       },
+       {
+        "x": 0.74823,
+        "y": 0.54347,
+        "w": 0.16328,
+        "h": 0.01053
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "In 2024/25, National Grid invested \u00a39.847 billion, achieved 9.0% asset growth, 9.0% Group return on equity, and grew underlying EPS by 2% to 73.3p."
+     },
+     {
+      "id": "c12",
+      "index": 12,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 82,
+      "cited_page": 82,
+      "printed_page": "80",
+      "section_path": [
+       "Financial Review Summary",
+       "Financial Review",
+       "Summary of Group financial performance for the year ended 31 March 2025"
+      ],
+      "node_id": "0097",
+      "node_range": [
+       82,
+       84
+      ],
+      "quote": "Underlying EPS1,2 73.3p 72.1p 2%",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.05966,
+        "y": 0.59423,
+        "w": 0.10035,
+        "h": 0.01132
+       },
+       {
+        "x": 0.74759,
+        "y": 0.59511,
+        "w": 0.16391,
+        "h": 0.01053
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "In 2024/25, National Grid invested \u00a39.847 billion, achieved 9.0% asset growth, 9.0% Group return on equity, and grew underlying EPS by 2% to 73.3p."
+     },
+     {
+      "id": "c13",
+      "index": 13,
+      "doc_name": "National Grid_Annual_Report.pdf",
+      "page": 82,
+      "cited_page": 82,
+      "printed_page": "80",
+      "section_path": [
+       "Financial Review Summary",
+       "Financial Review",
+       "Summary of Group financial performance for the year ended 31 March 2025"
+      ],
+      "node_id": "0097",
+      "node_range": [
+       82,
+       84
+      ],
+      "quote": "Capital investment 9,847 8,235 20%",
+      "quote_source": "model",
+      "match_method": "exact",
+      "match_score": 1.0,
+      "rects": [
+       {
+        "x": 0.05966,
+        "y": 0.71166,
+        "w": 0.10072,
+        "h": 0.0106
+       },
+       {
+        "x": 0.74823,
+        "y": 0.71174,
+        "w": 0.16328,
+        "h": 0.01053
+       }
+      ],
+      "page_width": 597.6,
+      "page_height": 842.4,
+      "claim": "In 2024/25, National Grid invested \u00a39.847 billion, achieved 9.0% asset growth, 9.0% Group return on equity, and grew underlying EPS by 2% to 73.3p."
+     }
+    ],
+    "sources": [
+     {
+      "page": 7,
+      "printed_page": "5",
+      "refs": 1,
+      "citation_ids": [
+       "c9"
+      ],
+      "section_path": [
+       "Chief Executive\u2019s review"
+      ]
+     },
+     {
+      "page": 8,
+      "printed_page": "6",
+      "refs": 2,
+      "citation_ids": [
+       "c7",
+       "c10"
+      ],
+      "section_path": [
+       "Chief Executive\u2019s review"
+      ]
+     },
+     {
+      "page": 9,
+      "printed_page": "7",
+      "refs": 2,
+      "citation_ids": [
+       "c1",
+       "c8"
+      ],
+      "section_path": [
+       "Chief Executive\u2019s review"
+      ]
+     },
+     {
+      "page": 20,
+      "printed_page": "18",
+      "refs": 2,
+      "citation_ids": [
+       "c2",
+       "c5"
+      ],
+      "section_path": [
+       "Our KPIs",
+       "National Grid 2024/25 KPIs, Assurance, Remuneration and Investment"
+      ]
+     },
+     {
+      "page": 21,
+      "printed_page": "19",
+      "refs": 2,
+      "citation_ids": [
+       "c3",
+       "c4"
+      ],
+      "section_path": [
+       "Our KPIs",
+       "Financial Measures and KPI Performance"
+      ]
+     },
+     {
+      "page": 82,
+      "printed_page": "80",
+      "refs": 3,
+      "citation_ids": [
+       "c11",
+       "c12",
+       "c13"
+      ],
+      "section_path": [
+       "Financial Review Summary",
+       "Financial Review",
+       "Summary of Group financial performance for the year ended 31 March 2025"
+      ]
+     },
+     {
+      "page": 83,
+      "printed_page": "81",
+      "refs": 1,
+      "citation_ids": [
+       "c6"
+      ],
+      "section_path": [
+       "Financial Review Summary",
+       "Financial Review",
+       "Summary of Group financial performance for the year ended 31 March 2025"
+      ]
+     }
+    ],
+    "steps": [
+     {
+      "id": "s1",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 2168
+     },
+     {
+      "id": "s2",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 183
+     },
+     {
+      "id": "s3",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 3911
+     },
+     {
+      "id": "s4",
+      "kind": "tool",
+      "tool": "get_document_structure",
+      "label": "Looked at the document outline",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 256
+     },
+     {
+      "id": "s5",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 5386
+     },
+     {
+      "id": "s6",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 6-10",
+      "pages": [
+       6,
+       7,
+       8,
+       9,
+       10
+      ],
+      "status": "done",
+      "elapsed_ms": 29
+     },
+     {
+      "id": "s7",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 81-83",
+      "pages": [
+       81,
+       82,
+       83
+      ],
+      "status": "done",
+      "elapsed_ms": 6
+     },
+     {
+      "id": "s8",
+      "kind": "tool",
+      "tool": "get_page_content",
+      "label": "Read pages 20-21",
+      "pages": [
+       20,
+       21
+      ],
+      "status": "done",
+      "elapsed_ms": 170
+     },
+     {
+      "id": "s9",
+      "kind": "thinking",
+      "tool": null,
+      "label": "Thinking",
+      "pages": [],
+      "status": "done",
+      "elapsed_ms": 7233
+     }
+    ],
+    "usage": {
+     "model": "gpt-5.6-sol",
+     "input_tokens": 110364,
+     "cached_tokens": 67215,
+     "output_tokens": 1462,
+     "reasoning_tokens": 384,
+     "cost_usd": 0.271859
+    },
+    "elapsed_ms": 28605,
+    "evaluation": {
+     "status": "done",
+     "faithfulness": 1.0,
+     "answer_relevancy": 0.7143,
+     "context_precision": 0.4972,
+     "errors": {},
+     "context_verdicts": [
+      {
+       "index": 0,
+       "page": 6,
+       "verdict": 0,
+       "reason": "The provided context discusses National Grid's evolving energy landscape, leadership transition, and strategic focus on whole-system planning and advanced technologies, which are relevant to understanding the management outlook. However, the context does not explicitly detail the specific management outlook, investment figures, growth targets, or strategic and operational emphases that are include"
+      },
+      {
+       "index": 1,
+       "page": 7,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's strategic focus, investment plans, and operational priorities related to infrastructure resilience, adaptation, and modernization. This information directly supports the management outlook described in the answer, including investment figures, growth targets, and emphasis on reliability and security, making the context useful in arriv"
+      },
+      {
+       "index": 2,
+       "page": 8,
+       "verdict": 1,
+       "reason": "The context provides detailed information about National Grid's investment plans, financial targets, strategic focus, and operational priorities, which directly support the management outlook described in the answer. The answer accurately summarizes the key points from the context regarding capital investment, asset growth, dividend policy, balance sheet management, and the emphasis on execution a"
+      },
+      {
+       "index": 3,
+       "page": 9,
+       "verdict": 0,
+       "reason": "The provided context offers detailed information about National Grid's recent activities, community support, and operational performance, but it does not explicitly address the management outlook, specific investment targets, growth projections, or strategic plans related to acute and chronic physical risk events through adaptation and resiliency measures. The answer contains detailed forward-look"
+      },
+      {
+       "index": 4,
+       "page": 10,
+       "verdict": 0,
+       "reason": "The context provides detailed information about National Grid's business model, resources, governance, and partnerships but does not explicitly address the management outlook or specific plans for acute and chronic physical risk events through adaptation and resiliency measures. The answer contains detailed management outlook, investment targets, strategic emphasis, and current trajectory informat"
+      },
+      {
+       "index": 5,
+       "page": 81,
+       "verdict": 0,
+       "reason": "The provided context does not contain any information about National Grid's management outlook, preparation, or plans for acute and chronic physical risk events through adaptation and resiliency measures. Instead, it focuses on financial performance, revenue, profit, investment, and asset growth without addressing risk management or adaptation strategies. Therefore, the context was not useful in a"
+      },
+      {
+       "index": 6,
+       "page": 82,
+       "verdict": 0,
+       "reason": "The provided context contains detailed financial and operational data for National Grid but does not explicitly address the management outlook regarding preparation and plans for acute and chronic physical risk events through adaptation and resiliency measures. The answer, however, provides a comprehensive management outlook including strategic focus, investment plans, and growth targets that are "
+      },
+      {
+       "index": 7,
+       "page": 83,
+       "verdict": 1,
+       "reason": "The provided context contains extensive financial and operational details about National Grid's performance, investment, and strategic focus, which directly support the management outlook described in the answer. The answer summarizes key points from the context such as capital investment plans, asset growth targets, dividend policy, balance sheet strength, and strategic priorities, indicating tha"
+      },
+      {
+       "index": 8,
+       "page": 20,
+       "verdict": 1,
+       "reason": "The provided context contains detailed information about National Grid's financial metrics, investment plans, and strategic priorities, which directly support the management outlook described in the answer. The answer summarizes and interprets these details to present a clear outlook on capital investment, growth targets, and strategic focus, demonstrating that the context was essential in forming"
+      },
+      {
+       "index": 9,
+       "page": 21,
+       "verdict": 1,
+       "reason": "The provided context includes detailed financial measures, investment figures, and performance metrics for National Grid, which directly support the management outlook described in the answer. The answer synthesizes these data points into a coherent outlook on capital investment, asset growth, and strategic focus, demonstrating that the context was essential for arriving at the given answer."
+      }
+     ],
+     "n_contexts_input": 10,
+     "n_contexts_scored": 10,
+     "judge_model": "gpt-4.1-mini",
+     "embedding_model": "text-embedding-3-small",
+     "ragas_version": "0.4.3",
+     "latency_s": 17.91,
+     "skipped_reason": null
+    },
+    "error": null,
+    "created_at": "2026-10-08T05:07:17Z",
+    "key_source": "server"
+   },
+   "contexts": []
+  }
+ ],
+ "attribution": "National Grid plc Annual Report and Accounts 2024/25 (c) National Grid plc. Shown for demonstration only.",
+ "attribution_url": "https://www.nationalgrid.com/investors"
+}

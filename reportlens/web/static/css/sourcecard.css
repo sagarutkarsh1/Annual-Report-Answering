@@ -1,0 +1,139 @@
+/* sourcecard.css - the source card (js/sourcecard.js): what a citation opens when the server holds no PDF (static public demo).
+   Header, close button, footer and the open/close animation come from the PDF viewer's chrome (viewer.css, .sp-*). */
+
+.sc-root .sc-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 20px 20px 24px;
+  background: var(--sp-canvas, var(--hover));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sc-root .sp-viewport {
+  display: flex;
+  flex-direction: column;
+}
+.sc-root .sc-body:focus-visible {
+  outline: 2px solid var(--sp-ring);
+  outline-offset: -2px;
+}
+
+.sc-crumb {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--fg-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.sc-crumb__label {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--fg-meta);
+  font-size: 11px;
+  line-height: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sc-crumb__path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sc-label {
+  margin: 8px 0 0;
+  color: var(--fg-meta);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sc-quote {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 3px solid var(--sp-hl-line, #ff8c00);
+  border-radius: 2px var(--r-row) var(--r-row) 2px;
+  background: var(--highlight-bg-color, rgb(255 210 0 / 0.35));
+  color: var(--fg);
+  font-size: 15px;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sc-quote {
+    background: rgb(255 210 0 / 0.18);
+  }
+}
+.sc-claim,
+.sc-plain {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+.sc-plain {
+  color: var(--fg-secondary);
+}
+
+.sc-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--fg-secondary);
+  font-size: 13px;
+  line-height: 18px;
+}
+.sc-note__icon {
+  flex: none;
+  display: inline-flex;
+  margin-top: 1px;
+  color: var(--accent-600);
+}
+.sc-attr {
+  margin: 0;
+  color: var(--fg-meta);
+  font-size: 12px;
+  line-height: 18px;
+}
+.sc-attr a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--chip-fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sc-root .sc-foot {
+  display: flex;
+  justify-content: center;
+}
+.sc-root .sc-foot[hidden] {
+  display: none;
+}
+.sc-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sc-count {
+  min-width: 112px;
+  text-align: center;
+  color: var(--fg-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
