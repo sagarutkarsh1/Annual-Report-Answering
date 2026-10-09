@@ -259,3 +259,23 @@ def test_main_refuses_an_output_folder_inside_the_project():
     with pytest.raises(SystemExit, match="outside the project"):
         bundle.main(["--out", str(ROOT / "bundle-inside-project")])
     assert not (ROOT / "bundle-inside-project").exists()
+
+
+# ----------------------------------------------------------------------------------------------- the packaged static demo chat
+@pytest.mark.parametrize("fixture_name", ["built_render", "built"])
+def test_both_bundles_carry_the_packaged_demo_chat(request, fixture_name):
+    out = request.getfixturevalue(fixture_name)
+    chat = out / "reportlens" / "demo_data" / "chat.json"
+    assert chat.is_file() and chat.stat().st_size > 1000
+    assert chat.read_bytes() == (ROOT / "reportlens" / "demo_data" / "chat.json").read_bytes()
+    assert not list((out / "reportlens" / "demo_data").glob("*.pdf")), "the static demo holds no third-party document"
+
+
+def test_the_demo_chat_is_shipped_by_the_package_and_not_ignored_by_git():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert "demo_data/*.json" in project["tool"]["setuptools"]["package-data"]["reportlens"]
+    ignored = [ln.strip() for ln in lines(".gitignore") if ln.strip() and not ln.startswith("#")]
+    assert not any("demo_data" in ln or ln in ("*.json", "reportlens/") for ln in ignored)
+    dockerignore = {ln.strip() for ln in lines(".dockerignore") if ln.strip() and not ln.startswith("#")}
+    assert not any("demo_data" in ln for ln in dockerignore)
+    assert "COPY reportlens ./reportlens" in (ROOT / "Dockerfile").read_text(encoding="utf-8")

@@ -18,6 +18,62 @@
       Signed in to the app in this browser? "Try it out" then works here too (the login is a cookie). Scripts and other
       programs: see the step-by-step guide in <code>docs/API.md</code> of the repository.
     </p>
+    <section class="docs-ref" aria-labelledby="docs-ref-title">
+      <details>
+        <summary id="docs-ref-title">Question sets: <code>POST /api/sessions/{sid}/batch</code> (stream format and config keys)</summary>
+        <p>
+          Answers a list of questions in one request. The questions are independent of each other and of the chat so far
+          (no follow-up context) and run in parallel, <code>batch_concurrency</code> at a time. The chat needs a ready document.
+        </p>
+        <h3>Request</h3>
+        <pre>POST /api/sessions/{sid}/batch
+Content-Type: application/json
+Accept: text/event-stream
+
+{"questions": ["What is the management outlook?", "What are the principal risks?"]}</pre>
+        <p>
+          Blank questions and exact duplicates are dropped; at most <code>max_batch_questions</code> remain (see
+          <code>GET /api/config</code>), each up to 4000 characters.
+        </p>
+        <h3>Events (Server-Sent Events)</h3>
+        <p>
+          The same events as <code>POST .../messages</code> (<code>step</code>, <code>step_done</code>, <code>token</code>,
+          <code>citation</code>, <code>answer_done</code>, <code>eval_started</code>, <code>eval_result</code>,
+          <code>eval_done</code>, <code>error</code>), interleaved across questions. Every one carries
+          <code>message_id</code> (which answer it belongs to) and the added integer <code>index</code> (0-based position in the
+          set). <code>message_start</code> is not sent; <code>batch_start</code> replaces it.
+        </p>
+        <ul>
+          <li>
+            <code>batch_start</code> comes first:
+            <code>{"items": [{"index": 0, "question": "...", "user_message": {...}, "message_id": "..."}, ...], "concurrency": 3}</code>.
+            All rows already exist, in order.
+          </li>
+          <li>
+            <code>error</code> with a <code>message_id</code> fails that one question only (the others continue).
+          </li>
+          <li><code>batch_done</code>: <code>{"answered": 4, "failed": 1}</code>, once every answer is finished.</li>
+          <li><code>done</code> comes last, after every answer has been scored or skipped.</li>
+        </ul>
+        <pre>event: batch_start
+data: {"items": [{"index": 0, "question": "...", "user_message": {...}, "message_id": "a1"}], "concurrency": 3}
+
+event: token
+data: {"message_id": "a1", "index": 0, "text": "Revenue "}</pre>
+        <h3>Errors before the stream starts (JSON)</h3>
+        <p>
+          <code>400 empty_question</code> (nothing left after cleaning), <code>400 too_many_questions</code>,
+          <code>402 budget_exhausted</code>, <code>403 demo_read_only</code>, <code>404 session_not_found</code>,
+          <code>409 session_busy</code> / <code>document_not_ready</code>, <code>429 rate_limited</code> (the set costs one
+          question per item against the hourly allowance; too few left refuses the whole set).
+        </p>
+        <h3>Config keys (<code>GET /api/config</code>)</h3>
+        <ul>
+          <li><code>default_questions</code>: the owner's question set offered after an upload (array of strings).</li>
+          <li><code>max_batch_questions</code>: the most questions one request may run.</li>
+        </ul>
+      </details>
+    </section>
     <div id="swagger-ui"></div>
     <script src="/static/vendor/swagger-ui/swagger-ui-bundle.js"></script>
     <script src="/static/js/docs.js"></script>

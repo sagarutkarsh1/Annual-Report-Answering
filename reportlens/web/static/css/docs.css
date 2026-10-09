@@ -40,3 +40,43 @@ body {
     margin-left: 0;
   }
 }
+
+/* Reference for the question-set stream, which OpenAPI cannot describe event by event. */
+.docs-ref {
+  max-width: 1420px;
+  margin: 12px auto 0;
+  padding: 0 20px;
+  color: #3f3f46;
+  font-size: 13px;
+  line-height: 20px;
+}
+.docs-ref summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #09090b;
+}
+.docs-ref h3 {
+  margin: 14px 0 4px;
+  font-size: 13px;
+}
+.docs-ref p,
+.docs-ref ul {
+  margin: 6px 0;
+}
+.docs-ref code,
+.docs-ref pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+.docs-ref code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #f4f4f5;
+}
+.docs-ref pre {
+  margin: 6px 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: #f4f4f5;
+}

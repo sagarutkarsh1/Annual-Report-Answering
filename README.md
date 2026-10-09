@@ -128,6 +128,8 @@ curl -c jar -b jar -X POST https://HOST/api/sessions/$SID/ask -H "Content-Type: 
 
 The last call returns the finished answer as JSON: text, citations (page, printed page, section path, quote, highlight
 rectangles), usage and the RAGAS scores. `POST /api/sessions/{id}/messages` streams the same answer as Server-Sent Events.
+`POST /api/sessions/{id}/batch {"questions": [...]}` answers a whole set of independent questions in parallel over one event stream
+(every event carries the question's `index`); it is what the web app's "Run all" button calls.
 Interactive reference at `/docs`; full walkthrough with a Python client in [docs/API.md](docs/API.md).
 
 ## Deploy for free (Render)
@@ -158,6 +160,9 @@ The full annotated list is in [.env.example](.env.example); the ones you are mos
 | `PUBLIC_MODE` | `0` | Safe public defaults: budget 10 USD, chat cap, per-visitor question limit, smaller uploads. |
 | `MAX_UPLOAD_MB` / `MAX_PAGES` | `100` / `1200` | Upload limits (public: 25 / 400). |
 | `LOW_MEMORY` | automatic | Small-host mode (child-process indexing and scoring); on automatically in a container with 600 MB or less. |
+| `DEFAULT_QUESTIONS` | five built-in questions | The preset question set offered after an upload (visitors can edit it): one question per line or separated by `\|\|`. |
+| `MAX_BATCH_QUESTIONS` | `10` | Most questions one "Run all" (`POST /batch`) may carry. |
+| `BATCH_CONCURRENCY` | `3` (`LOW_MEMORY`: `2`) | How many questions of a set the agent works on at the same time (1-6). Scoring is queued separately. Measurements: [docs/DEPLOY.md](docs/DEPLOY.md). |
 
 ## What the scores mean (and don't)
 

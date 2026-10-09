@@ -193,6 +193,50 @@ Measured on 8 October 2026 with the image built from this repository (`scripts\r
 * **Headroom:** about 160 MiB in the common case (the service wakes up, one report, questions) and about 45 MiB in the worst case above. If the limit is ever reached, the kernel is told to kill an indexing or scoring child, never the web server: the upload then says "ran out of memory" and the service stays up.
 * Answers stream without a gap longer than 14 s (the server sends a keep-alive every 15 s), so Render's proxy never sees an idle connection.
 
+### The question set ("Run all"): answering several questions at once under the same limits
+
+After an upload the page offers five editable preset questions and one button, "Run all", that answers them in parallel
+(`POST /api/sessions/{id}/batch`, `docs/ARCHITECTURE.md` section 13). Measured on 9 October 2026 with the same image and limits
+(`--memory=512m --memory-swap=512m --cpus=0.1`, `PUBLIC_MODE=1`, `LOW_MEMORY` automatic), the 308-page report indexed once and copied
+into a fresh chat for every run, the five default questions, and the fake model made slow like a real one
+(`REPORTLENS_MOCK_DELAY_MS=100`: 1 s before each agent turn, 0.1 s per streamed chunk). Every row is a fresh container whose first question
+was a throw-away warm-up (the answer libraries are loaded by then, as they are on a Render instance that has already served a question).
+Reproduce with `scripts\render_limits_test.py --image reportlens:render --pdf <report> --batch-sweep seq,1,2,3 --mock-delay-ms 100`
+(indexes once into a Docker volume, 25-30 minutes at 0.1 CPU, then about 15 minutes per row).
+
+| Mode | First answer | All 5 answers | All 5 scored | Peak memory (`docker stats`) | `memory.peak` (cache incl.) | CPU used |
+|---|---|---|---|---|---|---|
+| One after another, `/messages` (what you did before) | 208 s | 850 s | 923 s | 356 MiB | 365 MiB | 9.1 % |
+| **Run all, `BATCH_CONCURRENCY=1`** | 180 s | 662 s | 672 s | 361 MiB | 371 MiB | 9.5 % |
+| **Run all, `BATCH_CONCURRENCY=2` (the `LOW_MEMORY` default)** | 224 s | **586 s** | **659 s** | 375 MiB | 384 MiB | 9.9 % |
+| **Run all, `BATCH_CONCURRENCY=3`** | 375 s | 625 s | 683 s | 378 MiB | 388 MiB | 10.0 % |
+
+No row was killed for memory (`oom_kill` 0). **What this says, honestly:**
+
+* **Memory is not what limits parallelism.** Each extra question in flight costs about 7-10 MiB; three at once peaked at 378 MiB,
+  well under the 450 MiB line. The scoring children are the large consumers and they are queued one at a time (below).
+* **At 0.1 CPU the work is CPU-bound, so parallelism helps less than the number of questions suggests.** The container used 9-10 % of a
+  CPU in every row: the agent's own work (reading the outline and pages, resolving citations) and each scoring import RAGAS on the same
+  tenth of a core. What does overlap is the *waiting*: for the model's answer (on Render: the network and OpenAI's latency, free of
+  charge to the CPU) and, across questions, answering while an earlier answer is being scored. That is where the gain comes from:
+  five questions take 586 s instead of 850 s (-31 %), and everything including the scores 659 s instead of 923 s (-29 %).
+* **A third question in flight does not help**: the answers finish no sooner (625 s vs 586 s) and the first one arrives much later
+  (375 s vs 224 s) because three runs now share the same tenth of a core. **2 is the default for `LOW_MEMORY`, 3 elsewhere.** On a host with
+  more CPU than Render's free tier, raise `BATCH_CONCURRENCY` (up to 6): the CPU limit, not the memory, is what holds it back here.
+* **Scoring is the long pole and is queued separately.** One RAGAS scoring child runs at a time (`LOW_MEMORY`; two otherwise) and
+  starts the moment its answer is stored. A child used to be started per answer, importing RAGAS each time (about 45 s of CPU at 0.1 CPU).
+  A set now keeps one child alive, warm, for up to 45 s between answers: the last answer was scored 10-75 s after it arrived instead of
+  150-290 s (the earlier run of the same experiment: 746 / 760 / 794 s to everything scored for concurrency 1 / 2 / 3, against 672 / 659 / 683 s
+  above, at +5-10 MiB of peak memory). While it waits for the next answer the child holds the heavy-job gate, so indexing another report
+  waits that long at most.
+* While a report is being indexed in the same process (a 280 MiB child), a set answers one question at a time regardless of the setting.
+* The numbers move by about 10 % between identical runs (the Docker VM shares the machine), so differences smaller than that are noise.
+
+Other speed-ups looked at and **not** applied: PageIndex re-reads and re-parses the whole `pages.json` of the report for every
+page-read tool call (about 1-2 MB per call; a cache would save some CPU at the price of holding the parsed pages, ~10 MB, resident, and
+is a patch of the SDK's storage layer); the document outline is re-read from disk once per question by the agent but only once per
+document by the service (it is cached with the open PDF). The question rewrite already runs beside the agent and a set has none.
+
 ### What was changed to get there (each step re-measured)
 
 Every row is a full run of `scripts\render_limits_test.py` on the 308-page report under the same limits; "peak" is `docker stats`.
@@ -290,6 +334,9 @@ Model names follow the PageIndex documentation and OpenAI's catalogue; confirm y
 | **`MAX_PAGES`** | `1200` (public: `400`) | PDF page cap |
 | `PI_INDEX_FALLBACK_STANDARD` | `true` (public: `false`) | PDFs without bookmarks are refused instead of indexed the slow, costly way |
 | `PI_INDEX_SUMMARY_CONCURRENCY` | `16` (`LOW_MEMORY`: `6`) | Parallel summary calls while indexing |
+| `DEFAULT_QUESTIONS` | five built-in questions | The preset set offered after an upload (visitors edit it): one per line or separated by `||` |
+| `MAX_BATCH_QUESTIONS` | `10` | Questions one "Run all" may carry (a set also costs one `QUESTIONS_PER_HOUR_PER_IP` slot per question) |
+| `BATCH_CONCURRENCY` | `3` (`LOW_MEMORY`: `2`) | Questions of a set the agent works on at once (1-6); see the measurements in part B |
 | `EVAL_MAX_CONTEXTS`, `EVAL_CONCURRENCY` | `12`/`8` (public: `8`; `LOW_MEMORY`: `6`/`3`) | Pages scored per answer, parallel judge calls |
 | `INDEX_COST_ESTIMATE_USD` / `EVAL_COST_ESTIMATE_USD` | `0.40` / `0.08` | What the budget charges |
 | **`ALLOWED_HOSTS`** | empty | Comma list; `.onrender.com` also matches every subdomain |
@@ -337,12 +384,18 @@ The script starts the image with `--memory=512m --memory-swap=512m --cpus=0.1`, 
 access code, logs in, uploads the PDF, waits for indexing, asks two questions over the event stream, waits for the scoring, fetches the PDF
 with a Range request, optionally restarts the container (a Render sleep/wake) and prints the table of part B. It exits with 1 if anything
 failed or the kernel killed a process. Nothing is sent anywhere and nothing is billed. Your PDF is only uploaded to that local container.
+The question set: `--batch` asks the server's default questions through `POST /batch` on a fresh copy of the indexed chat (instead of the two
+single questions) and prints, per question, when the first token, the answer and the scores arrived; `--batch-compare` asks them one after
+another through `/messages` first; `--batch-sweep seq,1,2,3 --mock-delay-ms 100` is the experiment of part B (it indexes once into a Docker
+volume, restarts the container per mode with `BATCH_CONCURRENCY=n`, and prints one comparison table with the peak memory, the cgroup peak, the OOM
+counter and the CPU use of every run; `--keep` leaves the indexed volume for `--reuse-volume NAME`).
 Never put a real key on a `docker run` command line you keep in your shell history.
 
 ---
 
 ## F. What may still fail on the real Render (unverified)
 
+* **The question-set timings come from the fake model.** `REPORTLENS_MOCK_DELAY_MS` imitates the model's latency, but real OpenAI latencies, rate limits (several agent runs share one key's tokens-per-minute) and streaming vary. With real calls the waiting share is larger, so parallelism should help a little more than measured; the 429 behaviour of `BATCH_CONCURRENCY=3` on a small OpenAI tier was not tried.
 * **Real OpenAI instead of the fake server.** Memory use differs a little: real responses are longer, HTTPS adds buffers, and the real tree has different node counts. The headroom in part B is there for this, but it was not measured with real calls. Check the `memory ...` log lines on your first real upload and answer.
 * **The `/chat/completions` shortcut for indexing.** On a small host the indexing child sends the model calls itself instead of through litellm (same request, tested against the fake server request for request). If OpenAI answers that your index model is not served by `/chat/completions`, it automatically loads litellm for the rest of that job (about 150 MB more memory; the log says so).
 * **Render may restart or move a free service at any time**, and may be slower or faster than 0.1 CPU in practice (it is a shared, burstable limit). Everything on the instance is lost when that happens; visitors see the "demo restarted" message.

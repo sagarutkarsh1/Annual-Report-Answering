@@ -70,6 +70,32 @@ Events, in order:
 
 Comment lines `: ping` arrive every 15 seconds so proxies keep the connection open.
 
+**A set of questions in one request** ("Run all" in the web app): `POST /api/sessions/$SID/batch`.
+
+```bash
+curl -N -c jar -b jar -X POST "$BASE/api/sessions/$SID/batch" -H "Content-Type: application/json" \
+     -d '{"questions": ["What is Management Outlook ?", "What are Primary Sources for operating cash flows ?"]}'
+```
+
+The questions are independent of each other and of the chat so far (no history is sent to the agent) and are answered in parallel,
+`batch_concurrency` at a time (`GET /api/config`: `batch_concurrency`, `max_batch_questions`; the preset set the web app offers is
+`default_questions`). Blank questions and exact duplicates (any capitalisation) are dropped; what is left must be 1 to
+`max_batch_questions`, each up to 4000 characters. The stream carries the events above, interleaved across questions, with one
+more integer field on each, `index` (0-based position in the set) beside `message_id`; there is no `message_start`:
+
+| Event | Data |
+|---|---|
+| `batch_start` | first: `{"items": [{"index", "question", "user_message", "message_id"}, ...], "concurrency": 3}`. Every question and answer row already exists, in order |
+| `step` ... `eval_done`, `error` | as above, plus `index`. An `error` fails only that question |
+| `batch_done` | `{"answered": 4, "failed": 1}` once every answer has finished (scoring of finished answers may still be running) |
+| `done` | last: every answer is scored or skipped |
+
+If the spend budget runs out while the set is running, the questions that have not started finish as `error` with code
+`budget_exhausted`. A set counts one question per item against the hourly allowance (`QUESTIONS_PER_HOUR_PER_IP`): when fewer are
+left the whole set is refused with 429 `rate_limited`. Closing the connection cancels every answer that is still running; answers
+already finished keep being scored. Refusals (400 `empty_question`, `too_many_questions`, `question_too_long`; 402, 403, 404, 409
+`document_not_ready` / `session_busy`, 429, 503) are JSON, sent before the stream starts. One question or set at a time per chat.
+
 ## 4. The document and the highlights
 
 - `GET /api/sessions/$SID/document/file`: the PDF (supports `Range`).
@@ -131,6 +157,7 @@ with httpx.Client(base_url=BASE, timeout=httpx.Timeout(30, read=600)) as c:     
 | 403 `demo_read_only` | The demo chat cannot be changed; create your own (`from_session` works). |
 | 403 `own_key_required` | This server only answers with your own key (`X-LLM-Config`). |
 | 400 `invalid_llm_config` | The `X-LLM-Config` header is malformed or names an unknown provider. |
+| 400 `empty_question`, `too_many_questions`, `question_too_long` | A question or a set (`/batch`) breaks the limits in `GET /api/config`. |
 | 402 `budget_exhausted` | The server's spend budget is used up (your own key still works). |
 | 404 `session_not_found` | No such chat, or it belongs to someone else, or the free server slept and restarted empty. |
 | 409 `document_not_ready`, `session_busy` | Wait for indexing; one question at a time per chat. |

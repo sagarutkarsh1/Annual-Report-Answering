@@ -249,6 +249,7 @@ class ReportLensService:
     def locate(self, sid: str, page: int, quote: str | None, claim: str | None) -> LocateResponse
     # chat
     async def ask(self, sid: str, content: str) -> AsyncIterator[tuple[str, dict]]    # yields (sse_event_name, payload) - section 6
+    async def ask_batch(self, sid: str, questions: list[str]) -> AsyncIterator[tuple[str, dict]]   # a set of independent questions in parallel - section 13
     def get_message(self, sid: str, mid: str) -> Message
     async def evaluate_message(self, sid: str, mid: str) -> EvalScores     # (re-)run RAGAS; persists
     def health(self) -> dict
@@ -286,6 +287,7 @@ Demo mode: `settings.demo_mock` -> start `devtools.mock_openai` in-process on a 
 | `GET /api/sessions/{sid}/document/outline` | | `{"nodes":[{title,node_id,start_index,end_index,nodes}]}` | 404, 409 |
 | `GET /api/sessions/{sid}/locate?page=&quote=&claim=` | | `LocateResponse` | 404, 400 |
 | `POST /api/sessions/{sid}/messages` | `{"content": str}` | `text/event-stream` (section 6) | 400/404/409/503 as JSON **before** the stream starts |
+| `POST /api/sessions/{sid}/batch` | `{"questions": [str, ...]}` | `text/event-stream`: section 6 with an `index` on every event, framed by `batch_start` / `batch_done` (section 13) | 400/402/403/404/409/429/503 as JSON **before** the stream starts |
 | `GET /api/sessions/{sid}/messages/{mid}` | | `Message` | 404 |
 | `POST /api/sessions/{sid}/messages/{mid}/evaluate` | | `EvalScores` (blocks until RAGAS finishes) | 404, 409 |
 
@@ -408,3 +410,45 @@ Measurements and the reasoning are in docs/DEPLOY.md; `scripts/render_limits_tes
 * **REST API.** `/docs` serves a vendored Swagger UI (no CDN; `static/docs.html` + `js/docs.js`, no inline script for the CSP),
   routes carry tags and summaries, `POST /api/sessions/{sid}/ask` returns one JSON answer (it consumes the same `service.ask`
   generator as the SSE route). Walkthrough: `docs/API.md`.
+
+## 13. The question set ("Run all"): `POST /api/sessions/{sid}/batch`
+After an upload the UI offers a preset, editable list of questions (`Settings.default_questions`, env `DEFAULT_QUESTIONS`; five built in) and
+one click answers all of them in parallel.  Everything else about asking is unchanged: the same service, engine, citations and scoring.
+
+* **Request / refusals.** `{"questions": [str, ...]}`.  `service.clean_questions` strips, drops blanks and exact duplicates (case-insensitive) and
+  enforces `1..MAX_BATCH_QUESTIONS` questions of at most 4000 characters (400 `empty_question` / `too_many_questions` / `question_too_long`).
+  Everything `ask` refuses is refused the same way and, as there, as JSON **before** the stream starts (the route peeks the first event):
+  403 demo/read-only, 404, 409 `document_not_ready` / `session_busy` (one question *or set* in flight per chat), 402 budget, 503 no key, 429.
+  The per-IP limiter takes **one token per question, all or nothing** (`SlidingWindowLimiter.hit_many`): too few left = the whole set is refused
+  with 429 `rate_limited`; a refusal before the stream refunds them.
+* **Events** (`ReportLensService.ask_batch`, an async generator like `ask`).  Names and payloads are the single-question ones (section 6) with an
+  extra integer `index` (0-based position in the set) on every per-question event, and `message_start` is replaced by `batch_start`
+  `{"items": [{"index","question","user_message","message_id"}], "concurrency"}`, sent first.  All user and assistant rows are created up front,
+  in question order (stable `seq`, the chat shows every question at once).  `batch_done {"answered","failed"}` follows the last `answer_done` /
+  `error`; `eval_*` of finished answers may still arrive after it; `done` closes the stream once every answer is scored or skipped.
+* **Independence.** Each question gets no chat history and no rewrite (RAGAS `user_input` is the question).  A failure in one question is one
+  `error` event for its `index` / `message_id` and a row stored as failed; the others continue.  Later single questions in the chat do see the
+  batch's answers as history, like any earlier turn.
+* **How it is run.**  `ask()` and `ask_batch()` share `_answer` (one question: lease the document, engine thread, events, stored answer, scoring)
+  and differ only in what wraps it: `ask` yields it directly, `ask_batch` starts one asyncio task per question, all writing tagged events to one
+  queue that the generator drains.  A process-wide `_Gates` object holds the limits that keep peak memory flat:
+  `asyncio.Semaphore(BATCH_CONCURRENCY)` around each question's agent run (threads via the same `_spawn_engine`), a scoring semaphore (1 with
+  `LOW_MEMORY`, 2 otherwise: each RAGAS run, in a child process on small hosts, is the big memory consumer; scoring of answer *k* starts as soon as
+  it is stored while others are still answering), and, on a small host, a one-at-a-time lock taken by questions that start while an indexing child
+  runs (`lowmem.INDEXING_ACTIVE`).  The agent slot is given back only after the answer is stored and its scoring queued, so the next question's
+  **budget check** (made just before it starts, with `QUESTION_RESERVE_USD` held back for every question in flight, `_Run.active`) sees what the
+  previous one cost: when the money runs out the remaining questions end as `error` / `budget_exhausted` and the batch closes cleanly.
+* **Sharing.** One `_Resources` entry (open PDF, tree, folios) per session, leased by every question; its lazy values are built once under locks
+  (`_Resources._memo`, `PdfiumDoc._derive_lock`, PDFium itself behind `PDFIUM_LOCK`).
+* **Disconnect.**  Closing the stream sets the shared cancel event (children of the batch's master `_Run` share it), cancels the workers and marks
+  every unfinished row `error: cancelled`; answers already stored keep being scored (independent tasks, as for a single question).
+* **Settings** (`GET /api/config` also exposes `default_questions`, `max_batch_questions`, `batch_concurrency`): `DEFAULT_QUESTIONS`,
+  `MAX_BATCH_QUESTIONS` (10), `BATCH_CONCURRENCY` (3; 2 with `LOW_MEMORY`; 1-6).  Measurements and the reasoning for the default: docs/DEPLOY.md.
+* **Static demo without a PDF** (`demo.DemoInfo.has_document`, `GET /api/demo`): the packaged chat in `reportlens/demo_data/` is installed when
+  `DEMO_DIR` is unset and `demo/` holds no `chat.json`; its document routes answer 404 `document_not_found` and cloning it 409
+  `document_not_available`; citations open a card instead of the viewer.
+* **A scoring child kept for the next answer of a set.** `ChildEvaluator.evaluate(..., keep_warm=<bool | callable>)`: when the caller says more answers are coming
+  (a batch: `_Gates.unfinished > 1`) the child is parked instead of stopped, still holding the heavy-job gate, for `KEEP_WARM_S` (45 s); the next
+  scoring reuses it (`evaluation_worker` loops over requests on its stdin, trimming the heap between them), so RAGAS is imported once per set instead of
+  once per answer (about 45 s of CPU at 0.1 CPU).  A failure, a dead child, the idle timer or `aclose()` ends the warm period and frees the gate.
+
